@@ -1,0 +1,3 @@
+[client] attempt 1 failed: ConnectionRefusedError(111, 'Connection refused')
+[client] attempt 2 failed: ConnectionRefusedError(111, 'Connection refused')
+[client] attempt 3: reply: b'ACK:HELLO DISTRIBUTED WORLD'

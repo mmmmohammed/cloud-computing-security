@@ -1,0 +1,26 @@
+[
+  {
+    "target": "AWS af-south-1 (Cape Town)",
+    "host": "s3.af-south-1.amazonaws.com",
+    "ip": "52.95.176.26",
+    "min_ms": 80.4,
+    "avg_ms": 83.5,
+    "jitter_ms": 1.8
+  },
+  {
+    "target": "AWS eu-west-1 (Ireland)",
+    "host": "s3.eu-west-1.amazonaws.com",
+    "ip": "3.5.64.195",
+    "min_ms": 189.0,
+    "avg_ms": 193.6,
+    "jitter_ms": 2.6
+  },
+  {
+    "target": "AWS us-east-1 (N. Virginia)",
+    "host": "s3.us-east-1.amazonaws.com",
+    "ip": "16.15.236.220",
+    "min_ms": 212.4,
+    "avg_ms": 217.1,
+    "jitter_ms": 4.7
+  }
+]

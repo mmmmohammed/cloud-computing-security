@@ -1,0 +1,4 @@
+[server] listening on 127.0.0.1:9009
+[server] connection from ('127.0.0.1', 58826)
+[server] received: b'hello distributed world'
+[server] served request, shutting down

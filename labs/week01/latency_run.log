@@ -1,0 +1,4 @@
+AWS af-south-1 (Cape Town)         52.95.176.26     min=   80.4ms avg=   83.5ms
+AWS eu-west-1 (Ireland)            3.5.64.195       min=  189.0ms avg=  193.6ms
+AWS us-east-1 (N. Virginia)        16.15.236.220    min=  212.4ms avg=  217.1ms
+Azure (South Africa North)         DNS FAILED: gaierror(-2, 'Name or service not known')

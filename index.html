@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Distributed Computing — Cloud Computing Security · Module 01</title>
+<meta name="description" content="Module 01 of a cloud computing security portfolio: the six eras of computing, what makes a distributed system coherent, the eight fallacies, and a lab that breaks a socket client on purpose." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2322d3ee'/><text x='16' y='23' font-size='18' font-family='monospace' text-anchor='middle' fill='%23050810'>c</text></svg>" />
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a class="brand" href="#top">
+      <span class="brand-mark">cc</span>
+      <span>cloud-computing-security <span class="dim">/ 01</span></span>
+    </a>
+    <nav class="topnav" aria-label="Section navigation">
+      <a href="#eras">Eras</a>
+      <a href="#system">System</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#fallacies">Fallacies</a>
+      <a href="#lab">Lab</a>
+      <a href="#quiz">Quiz</a>
+    </nav>
+    <span class="tag-mod">Module 01 · Foundation</span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============================================================ HERO ==== -->
+  <section class="hero wrap" id="top">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">Cloud Computing Security · Module 01</p>
+        <h1>Before you can secure the cloud, you have to understand what it <em>actually is</em> — a distributed system.</h1>
+        <p class="lede">
+          Six eras of computing, six properties that make independent machines behave like one coherent system,
+          and the eight fallacies that explain why cloud services fail — and exactly where attackers aim.
+          Then a lab where I break a working client on purpose and fix it.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#eras">Walk the timeline →</a>
+          <a class="btn btn-ghost" href="#lab">See the lab evidence</a>
+        </div>
+        <div class="hero-chips" aria-label="Topics covered">
+          <span class="chip">mainframe → cloud</span>
+          <span class="chip">transparency</span>
+          <span class="chip">three-tier</span>
+          <span class="chip">fallacies</span>
+          <span class="chip">fault tolerance</span>
+          <span class="chip">chaos engineering</span>
+        </div>
+      </div>
+
+      <figure class="hero-visual" aria-label="Animated diagram of a distributed system topology">
+        <canvas id="topology" width="640" height="520" role="img"
+          aria-label="Nodes representing independent computers connected by edges representing an unreliable network"></canvas>
+        <figcaption class="vis-caption">
+          <span><span class="pulse-dot"></span>live topology — nodes are independent computers</span>
+          <span>edges = the unreliable network</span>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div class="metrics" aria-label="Module at a glance">
+      <div class="metric"><b>06</b><span>eras of computing</span></div>
+      <div class="metric"><b>08</b><span>fallacies</span></div>
+      <div class="metric"><b>05</b><span>paradigms</span></div>
+      <div class="metric"><b>03</b><span>tiers</span></div>
+      <div class="metric"><b data-count="83.5" data-decimals="1">0<small>ms</small></b><span>Cape Town handshake</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ ERAS ==== -->
+  <section class="section" id="eras">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">01</span> The road to cloud</p>
+        <h2 class="sec-title">Computing swings like a pendulum — and security moves with it</h2>
+        <p class="sec-lead">
+          Centralised mainframe, decentralised PC, centralised cloud again. Each swing changes where the
+          perimeter sits, who holds the data, and therefore which controls you can even apply.
+        </p>
+      </div>
+
+      <div class="timeline">
+        <article class="era reveal">
+          <span class="era-year">1960s–70s</span>
+          <h3>Mainframes &amp; time-sharing</h3>
+          <p>One powerful central computer; many users on dumb terminals. Centralised control, very high cost.</p>
+          <span class="shift">Pendulum: fully centralised</span>
+        </article>
+        <article class="era reveal">
+          <span class="era-year">1980s</span>
+          <h3>PCs &amp; client–server</h3>
+          <p>Computing moves to desks. Servers provide files, mail and databases to client PCs over LANs.</p>
+          <span class="shift">Pendulum: decentralised</span>
+        </article>
+        <article class="era reveal">
+          <span class="era-year">1990s</span>
+          <h3>Internet &amp; clusters</h3>
+          <p>The web connects everything. Clusters of cheap servers replace single big machines.</p>
+          <span class="shift">Scale out replaces scale up</span>
+        </article>
+        <article class="era reveal">
+          <span class="era-year">2000s</span>
+          <h3>Grid &amp; utility</h3>
+          <p>Grids share resources across institutions (CERN's LHC grid). Utility computing bills like electricity.</p>
+          <span class="shift">Billing becomes a design constraint</span>
+        </article>
+        <article class="era reveal">
+          <span class="era-year">2006–2010s</span>
+          <h3>Cloud computing</h3>
+          <p>AWS launches S3 and EC2 (2006); Azure and Google follow. Self-service, pay-per-use infrastructure.</p>
+          <span class="shift">Pendulum: centralised again</span>
+        </article>
+        <article class="era reveal">
+          <span class="era-year">Today</span>
+          <h3>Edge, serverless &amp; AI</h3>
+          <p>Containers, serverless functions, IoT and edge nodes; GPU clouds power AI workloads.</p>
+          <span class="shift">Processing pushed back out</span>
+        </article>
+      </div>
+
+      <div class="lens reveal">
+        <span class="lens-tag">security lens</span>
+        <p>
+          Every pivot relocates the trust boundary. On a mainframe you guarded one room; on client–server you
+          guarded a LAN; in the cloud the perimeter dissolves into <strong>identity, API calls and configuration</strong>.
+          That is why the rest of this course is mostly about IAM, storage policies, network paths and posture — not firewalls at the edge.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================== SYSTEM ==== -->
+  <section class="section" id="system">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">02</span> Definition</p>
+        <h2 class="sec-title">What a distributed system actually is</h2>
+      </div>
+
+      <blockquote class="quote-def reveal">
+        A collection of independent computers that appears to its users as a single coherent system.
+        <cite>Tanenbaum &amp; van Steen — the definition the whole module is built on</cite>
+      </blockquote>
+
+      <div class="cards">
+        <article class="card reveal">
+          <span class="idx">01</span>
+          <h3>Resource sharing</h3>
+          <p>Hardware, data and services are shared across machines — one database serving many web servers.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">02</span>
+          <h3>Concurrency</h3>
+          <p>Many components run at the same time and must coordinate access to shared data.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">03</span>
+          <h3>Scalability</h3>
+          <p>Add more machines (scale out) to handle more users rather than buying one bigger machine.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">04</span>
+          <h3>Fault tolerance</h3>
+          <p>The system keeps working when individual nodes fail, using replication and redundancy.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">05</span>
+          <h3>No global clock</h3>
+          <p>Each node has its own clock; ordering events needs logical clocks or synchronisation (NTP).</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">06</span>
+          <h3>Transparency</h3>
+          <p>Complexity is hidden: users do not see where data lives or which server answered.</p>
+        </article>
+      </div>
+
+      <div class="lens reveal">
+        <span class="lens-tag">security lens</span>
+        <p>
+          <strong>No global clock</strong> is the quiet one. If nodes disagree on time, log correlation breaks,
+          token expiry drifts, and an attacker can replay a request inside a window that two servers judge
+          differently. Reliable NTP is a security control, not housekeeping.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== TRANSPARENCY ==== -->
+  <section class="section" id="transparency">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">03</span> Illusion</p>
+        <h2 class="sec-title">Six forms of transparency — and what each one hides</h2>
+        <p class="sec-lead">
+          Transparency is the magic trick that makes many machines look like one. It is also what lets a
+          compromised component stay invisible while the service still looks healthy.
+        </p>
+      </div>
+
+      <div class="cards">
+        <article class="card reveal">
+          <span class="idx">ACCESS</span>
+          <h3>Same call, local or remote</h3>
+          <p>A mapped network drive looks like a local disk. Hides: whether the bytes ever left your machine.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">LOCATION</span>
+          <h3>You never know where it is</h3>
+          <p>A URL hides the server's location. Hides: data sovereignty — which country holds the replica.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">MIGRATION</span>
+          <h3>Resources move silently</h3>
+          <p>A live-migrated VM keeps serving. Hides: that the host, hypervisor and network path all changed.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">REPLICATION</span>
+          <h3>Many copies, one resource</h3>
+          <p>Several copies exist for speed and reliability. Hides: replication lag and stale reads.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">CONCURRENCY</span>
+          <h3>Shared without collision</h3>
+          <p>Two tellers update different accounts without interfering. Hides: race conditions and lost updates.</p>
+        </article>
+        <article class="card reveal">
+          <span class="idx">FAILURE</span>
+          <h3>Faults are masked</h3>
+          <p>A failed server is replaced and the user retries. Hides: that you were attacked rather than unlucky.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================================================== ARCHITECTURE ==== -->
+  <section class="section" id="architecture">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">04</span> Structure</p>
+        <h2 class="sec-title">The three-tier model is the backbone of cloud apps</h2>
+        <p class="sec-lead">
+          Presentation, application, data. Split the tiers and each becomes a separate attack surface with its
+          own controls — which is the whole reason cloud security is layered.
+        </p>
+      </div>
+
+      <div class="tier-diagram reveal">
+        <div class="tier">
+          <span class="layer">Tier 1 · presentation</span>
+          <h3>Browser / mobile app</h3>
+          <p>Shows data and collects input. Runs on the user device or a CDN.</p>
+          <span class="svc">CloudFront · S3 static hosting</span>
+        </div>
+        <div class="tier-link" aria-hidden="true"></div>
+        <div class="tier">
+          <span class="layer">Tier 2 · application</span>
+          <h3>Business logic &amp; APIs</h3>
+          <p>Web/app servers, APIs and microservices behind a load balancer.</p>
+          <span class="svc">EC2 · Lambda · ECS</span>
+        </div>
+        <div class="tier-link" aria-hidden="true"></div>
+        <div class="tier">
+          <span class="layer">Tier 3 · data</span>
+          <h3>Databases, caches, objects</h3>
+          <p>Replicated for availability — and the most valuable target in the system.</p>
+          <span class="svc">RDS · ElastiCache · S3</span>
+        </div>
+      </div>
+
+      <div class="reveal">
+        <ul class="styles-list">
+          <li><b>Client–server</b> — clients request, servers respond (email, web)</li>
+          <li><b>Peer-to-peer</b> — every node is client and server (BitTorrent, blockchain)</li>
+          <li><b>Service-oriented</b> — services talk via standard interfaces (SOAP/REST)</li>
+          <li><b>Microservices</b> — many small, independently deployed services (Netflix, Uber)</li>
+          <li><b>Event-driven</b> — components react to messages on queues or streams</li>
+        </ul>
+      </div>
+
+      <div class="lens reveal">
+        <span class="lens-tag">security lens</span>
+        <p>
+          Each split tier is a new <strong>trust boundary</strong>. More services means more identities, more keys,
+          more network paths and more ways to misconfigure a bucket. Microservices make the blast radius smaller
+          and the visible attack surface bigger at the same time.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= PARADIGMS ==== -->
+  <section class="section" id="paradigms">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">05</span> Comparison</p>
+        <h2 class="sec-title">Cluster, grid, utility, cloud, edge</h2>
+        <p class="sec-lead">Cloud borrows from all of them: clusters inside data centres, grid-style sharing, utility-style billing.</p>
+      </div>
+
+      <div class="table-scroll reveal">
+        <table>
+          <caption class="visually-hidden">Comparison of distributed computing paradigms</caption>
+          <thead>
+            <tr>
+              <th scope="col">Paradigm</th>
+              <th scope="col">Ownership &amp; control</th>
+              <th scope="col">Coupling</th>
+              <th scope="col">Typical use</th>
+              <th scope="col">Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cluster</td>
+              <td>One organisation, one site</td>
+              <td><span class="tag">tight · fast LAN</span></td>
+              <td>High-performance computing, databases</td>
+              <td>University HPC cluster; Hadoop cluster</td>
+            </tr>
+            <tr>
+              <td>Grid</td>
+              <td>Many organisations share resources</td>
+              <td><span class="tag">loose · across WAN</span></td>
+              <td>Large science projects</td>
+              <td>CERN Worldwide LHC Computing Grid</td>
+            </tr>
+            <tr>
+              <td>Utility</td>
+              <td>Provider owns, customer meters use</td>
+              <td><span class="tag">loose</span></td>
+              <td>Pay-per-use compute and storage</td>
+              <td>Early IBM and Sun on-demand offers</td>
+            </tr>
+            <tr>
+              <td>Cloud</td>
+              <td>Provider owns, self-service via API</td>
+              <td><span class="tag cy">virtualised · elastic</span></td>
+              <td>Almost any IT workload</td>
+              <td>AWS, Microsoft Azure, Google Cloud</td>
+            </tr>
+            <tr>
+              <td>Edge / fog</td>
+              <td>Distributed near users or devices</td>
+              <td><span class="tag">loose · latency-sensitive</span></td>
+              <td>IoT, video analytics, 5G</td>
+              <td>Smart-meter gateways; CDN edge nodes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= FALLACIES ==== -->
+  <section class="section" id="fallacies">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">06</span> The eight fallacies</p>
+        <h2 class="sec-title">Wrong assumptions, and what each one costs you</h2>
+        <p class="sec-lead">
+          Peter Deutsch and colleagues at Sun listed the assumptions new designers wrongly make. Tap a card to
+          turn it over — the back is the security consequence.
+        </p>
+      </div>
+
+      <div class="fallacies">
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">01</span>
+              <h3>The network is reliable</h3>
+              <p class="reality">Links fail, packets drop.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Design for retries and failover. Availability <em>is</em> part of security — a service that is down is a service that cannot enforce anything.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">02</span>
+              <h3>Latency is zero</h3>
+              <p class="reality">Every call takes time.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Timeouts get abused for denial of service. Unbounded waits become resource exhaustion — measure the handshake, then set a deadline.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">03</span>
+              <h3>Bandwidth is infinite</h3>
+              <p class="reality">Links saturate.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>DDoS attacks exploit exactly this limit. Volume-based defences (rate limits, autoscaling caps, egress quotas) are part of the security design.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">04</span>
+              <h3>The network is secure</h3>
+              <p class="reality">Traffic can be sniffed or altered.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Encrypt in transit (TLS) and authenticate every call. "It's an internal network" is how lateral movement succeeds — the SACCO case study in this module dies on this exact sentence.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">05</span>
+              <h3>Topology does not change</h3>
+              <p class="reality">Nodes come and go constantly.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Asset inventories go stale, and unknown assets go unpatched. Cloud needs continuous discovery, not a spreadsheet from last quarter.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">06</span>
+              <h3>There is one administrator</h3>
+              <p class="reality">Many teams and providers.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Unclear responsibility causes misconfiguration. Shared responsibility only works when every control has a named owner.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">07</span>
+              <h3>Transport cost is zero</h3>
+              <p class="reality">Data transfer costs money.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>Egress fees and exfiltration both cost you. A sudden egress spike is often the first cheap signal that data is leaving.</p>
+            </span>
+          </span>
+        </button>
+
+        <button class="fallacy reveal" type="button" aria-pressed="false">
+          <span class="fallacy-inner">
+            <span class="fallacy-face fallacy-front">
+              <span class="f-num">08</span>
+              <h3>The network is homogeneous</h3>
+              <p class="reality">Mixed devices and protocols.</p>
+              <span class="hint">tap for impact</span>
+            </span>
+            <span class="fallacy-face fallacy-back">
+              <span class="f-tag">security impact</span>
+              <p>The weakest component sets the security level. One legacy protocol in the path defeats the strong crypto everywhere else.</p>
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================== CASE STUDY ==== -->
+  <section class="section" id="case">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:2rem">
+        <p class="eyebrow"><span class="sec-num">07</span> Real life</p>
+        <h2 class="sec-title">Netflix: designing for failure on purpose</h2>
+      </div>
+
+      <div class="case reveal">
+        <div class="case-main">
+          <p class="case-kicker">Streaming · 2008 → 2016</p>
+          <h3>One corrupted database took down DVD shipments for three days</h3>
+          <p>
+            Netflix ran its own data centres. A 2008 database corruption stopped DVD shipments for three days —
+            a textbook single point of failure. Over the following years the company rebuilt the platform as
+            hundreds of microservices across many AWS servers and Availability Zones.
+          </p>
+          <p>
+            Then it went further: engineers built <b>Chaos Monkey</b>, a tool that randomly terminates production
+            instances, to prove the system survives. The wider <b>Simian Army</b> tested larger failures, including
+            losing an entire zone.
+          </p>
+          <div class="lesson">
+            <b>Lesson:</b> assume components will fail and test it deliberately. Resilience is a design property,
+            not luck — the same mindset underpins incident response and disaster recovery.
+          </div>
+        </div>
+        <aside class="case-aside">
+          <h4>The SACCO scenario, applied</h4>
+          <ul>
+            <li><span class="tick">→</span><span><b>40,000 members</b> and one server = one single point of failure.</span></li>
+            <li><span class="tick">→</span><span>Vendor proposal: <b>3 app servers</b>, load balancer, replicated DB in two towns.</span></li>
+            <li><span class="tick">→</span><span>ICT officer: <em>"our office network is private, so we don't need encryption between servers."</em></span></li>
+            <li><span class="tick">→</span><span>That sentence is fallacy <b>04</b> — and the reason the design fails review.</span></li>
+          </ul>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== PIPELINE ==== -->
+  <section class="section" id="pipeline">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">08</span> Conclusion</p>
+        <h2 class="sec-title">From distributed computing to cloud computing</h2>
+        <p class="sec-lead">Cloud is not a new technology. It is a business and delivery model built on decades of distributed-systems research.</p>
+      </div>
+      <ol class="pipeline">
+        <li class="step reveal">
+          <h3>Distributed systems</h3>
+          <p>Independent machines cooperate over a network.</p>
+        </li>
+        <li class="step reveal">
+          <h3>Virtualisation</h3>
+          <p>One physical server runs many isolated virtual machines.</p>
+        </li>
+        <li class="step reveal">
+          <h3>Resource pooling</h3>
+          <p>Thousands of servers form one shared pool of capacity.</p>
+        </li>
+        <li class="step reveal">
+          <h3>Automation &amp; APIs</h3>
+          <p>Software provisions resources in seconds, with no human ticket.</p>
+        </li>
+        <li class="step reveal">
+          <h3>Metered self-service</h3>
+          <p>Customers pay only for what they use — that is the cloud.</p>
+        </li>
+      </ol>
+      <div class="lens reveal" style="margin-top:2rem">
+        <span class="lens-tag">security lens</span>
+        <p>
+          Automation and APIs are what make cloud <strong>fast to break at scale</strong>. A console click can expose a
+          bucket to the internet in seconds, and an API key can do it a thousand times before anyone notices.
+          That is why posture management and detection arrive later in this track.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================= LAB ==== -->
+  <section class="section" id="lab">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">09</span> Lab evidence</p>
+        <h2 class="sec-title">I broke my own client on purpose — and kept the tracebacks</h2>
+        <p class="sec-lead">
+          The lab asks for latency to cloud regions, a socket client and server, then stopping the server
+          mid-session to see what happens. Below is the real output from this machine, including the failures.
+          Failing loudly, then fixing it, is the point of the exercise.
+        </p>
+      </div>
+
+      <div class="panel reveal" style="margin-bottom:1.1rem">
+        <div class="panel-head">
+          <span>1 · Regional latency — TCP handshake to port 443, 5 samples each</span>
+          <span class="tag cy">labs/week01/probe_regions.py</span>
+        </div>
+        <div class="panel-body">
+          <div class="table-scroll" style="border:0;background:none">
+            <table class="lat-table">
+              <thead>
+                <tr>
+                  <th scope="col">Endpoint</th>
+                  <th scope="col">Resolved IP</th>
+                  <th scope="col">Min</th>
+                  <th scope="col">Avg</th>
+                  <th scope="col">Jitter</th>
+                  <th scope="col" style="width:150px">Relative</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>AWS af-south-1 · Cape Town</td>
+                  <td style="font-family:var(--mono);font-size:.78rem">52.95.176.26</td>
+                  <td>80.4 ms</td>
+                  <td><b style="color:var(--green);font-weight:600">83.5 ms</b></td>
+                  <td>1.8 ms</td>
+                  <td class="bar-cell"><span class="bar" style="width:38%"></span></td>
+                </tr>
+                <tr>
+                  <td>AWS eu-west-1 · Ireland</td>
+                  <td style="font-family:var(--mono);font-size:.78rem">3.5.64.195</td>
+                  <td>189.0 ms</td>
+                  <td><b style="color:var(--txt);font-weight:600">193.6 ms</b></td>
+                  <td>2.6 ms</td>
+                  <td class="bar-cell"><span class="bar" style="width:89%"></span></td>
+                </tr>
+                <tr>
+                  <td>AWS us-east-1 · N. Virginia</td>
+                  <td style="font-family:var(--mono);font-size:.78rem">16.15.236.220</td>
+                  <td>212.4 ms</td>
+                  <td><b style="color:var(--txt);font-weight:600">217.1 ms</b></td>
+                  <td>4.7 ms</td>
+                  <td class="bar-cell"><span class="bar" style="width:100%"></span></td>
+                </tr>
+                <tr>
+                  <td>Azure · South Africa North</td>
+                  <td style="font-family:var(--mono);font-size:.78rem">—</td>
+                  <td colspan="3"><span class="verdict fail">✕ DNS resolution failed</span></td>
+                  <td class="bar-cell"><span style="color:var(--red);font-family:var(--mono);font-size:.72rem">no route</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="margin:1.1rem 0 0;color:var(--mut);font-size:.88rem">
+            Cape Town is <b style="color:var(--txt)">2.3× faster</b> than Ireland from here (83.5 ms vs 193.6 ms), and the
+            difference is nearly all distance — constant packet count, growing RTT. That is fallacy 02 in numbers:
+            latency is never zero, and it is a physical property of where you deploy.
+          </p>
+        </div>
+      </div>
+
+      <div class="lab-grid">
+        <div class="panel reveal">
+          <div class="panel-head">
+            <span>2 · The failure</span>
+            <span class="tag bad">client_crash.log</span>
+          </div>
+          <div class="panel-body">
+            <p>
+              Server stopped mid-session. The naive client has no timeout and no retry, so the kernel's
+              refusal becomes an unhandled exception and the program dies.
+            </p>
+            <div class="term">
+              <div class="term-bar">
+                <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+                <span class="fname">python3 socket_client_naive.py</span>
+              </div>
+<pre><span class="c-prompt">$</span> python3 socket_client_naive.py
+Traceback (most recent call last):
+  File "socket_client_naive.py", line 5, in &lt;module&gt;
+    s.connect(("127.0.0.1", 9009))   <span class="c-dim"># no timeout, no retry</span>
+<span class="c-err">ConnectionRefusedError: [Errno 111] Connection refused</span></pre>
+            </div>
+            <p style="margin-top:1rem">
+              Everything worked one minute earlier. That is the whole trap of "the network is reliable": the code
+              was correct, and still crashed.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <span>3 · The fix — timeout + bounded retry</span>
+            <span class="tag ok">client_retry_recover.log</span>
+          </div>
+          <div class="panel-body">
+            <p>
+              Three attempts, 2 s deadline per attempt, linear backoff. Same dead server, different outcome:
+              the client survives and recovers the moment the server comes back.
+            </p>
+            <div class="term">
+              <div class="term-bar">
+                <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+                <span class="fname">python3 socket_client_retry.py</span>
+              </div>
+<pre><span class="c-prompt">$</span> python3 socket_client_retry.py
+<span class="c-warn">[client] attempt 1 failed: ConnectionRefusedError(111, 'Connection refused')</span>
+<span class="c-warn">[client] attempt 2 failed: ConnectionRefusedError(111, 'Connection refused')</span>
+<span class="c-ok">[client] attempt 3: reply: b'ACK:HELLO DISTRIBUTED WORLD'</span></pre>
+            </div>
+            <p style="margin-top:1rem">
+              Note what changed: not the network, not the server. Only the <b style="color:var(--txt)">client's assumptions</b>.
+              Retry logic is availability engineering — and availability is a security property.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <span>4 · Retry against a server that never returns</span>
+            <span class="tag warn">client_retry_fail.log</span>
+          </div>
+          <div class="panel-body">
+            <p>Retries are not magic. With no upstream, the client gives up cleanly instead of hanging forever:</p>
+            <div class="term">
+              <div class="term-bar">
+                <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+                <span class="fname">python3 socket_client_retry.py</span>
+              </div>
+<pre><span class="c-warn">[client] attempt 1 failed: ConnectionRefusedError(111, 'Connection refused')</span>
+<span class="c-warn">[client] attempt 2 failed: ConnectionRefusedError(111, 'Connection refused')</span>
+<span class="c-warn">[client] attempt 3 failed: ConnectionRefusedError(111, 'Connection refused')</span>
+<span class="c-dim">[client] giving up after retries</span></pre>
+            </div>
+            <p style="margin-top:1rem">
+              A bounded failure is a feature. Unbounded retries turn one dead dependency into a self-inflicted
+              denial of service — the difference between resilience and a retry storm.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <span>5 · Reflection</span>
+            <span class="tag cy">answers</span>
+          </div>
+          <div class="panel-body">
+            <ul class="reflect">
+              <li><b>Which fallacy did the crash expose?</b> The network is reliable — and its twin, that topology does not change. The failure was a stopped process, not a broken cable.</li>
+              <li><b>What did the retry add?</b> Explicit timeout (latency is not zero) plus bounded attempts (so failure stays affordable).</li>
+              <li><b>Transparency provided:</b> access transparency — I called <code>connect()</code> without caring whether the peer was local or remote.</li>
+              <li><b>Transparency missing:</b> failure transparency and relocation. Nothing masked the outage, and nothing moved the request to a healthy replica, because there was no replica.</li>
+              <li><b>Why the Azure row failed:</b> DNS could not resolve the endpoint in this environment. A name that does not resolve is an availability failure before any TCP packet exists — the first link in the chain is always name resolution.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="lens reveal">
+        <span class="lens-tag">security lens</span>
+        <p>
+          The same three lines — timeout, bounded retries, backoff — are what stop an outage from becoming a
+          <strong>credential-stuffing amplifier</strong>. Retry storms against an auth service are indistinguishable
+          from a brute-force attack until you look at the client. Build the limit before the attacker does.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ QUIZ ==== -->
+  <section class="section" id="quiz">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="sec-num">10</span> Check yourself</p>
+        <h2 class="sec-title">Five questions from the SACCO case study</h2>
+        <p class="sec-lead">
+          Jamii SACCO, 40,000 members, one back-office server that died during dividend payouts. Pick an answer —
+          the explanation appears either way.
+        </p>
+      </div>
+
+      <div class="quiz" id="quiz-list">
+        <article class="q reveal" data-answer="B">
+          <p class="q-text"><span class="q-no">Q1</span> Which characteristic of distributed systems does the replicated database in Nairobi mainly provide?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-opt="A"><span class="key">A</span> A global clock</button>
+            <button class="opt" type="button" data-opt="B"><span class="key">B</span> Fault tolerance</button>
+            <button class="opt" type="button" data-opt="C"><span class="key">C</span> Access transparency</button>
+            <button class="opt" type="button" data-opt="D"><span class="key">D</span> Lower licence costs</button>
+          </div>
+          <p class="why"><b>B.</b> A second copy at another site lets withdrawals continue if one site fails — fault tolerance through replication. It is not a clock, and it does not hide anything from the user.</p>
+        </article>
+
+        <article class="q reveal" data-answer="A">
+          <p class="q-text"><span class="q-no">Q2</span> Members should not know which of the three application servers answered them. This is an example of:</p>
+          <div class="opts">
+            <button class="opt" type="button" data-opt="A"><span class="key">A</span> Location and replication transparency</button>
+            <button class="opt" type="button" data-opt="B"><span class="key">B</span> Concurrency control</button>
+            <button class="opt" type="button" data-opt="C"><span class="key">C</span> Vertical scaling</button>
+            <button class="opt" type="button" data-opt="D"><span class="key">D</span> Migration transparency</button>
+          </div>
+          <p class="why"><b>A.</b> The load balancer hides which replica — and where — served the request: location plus replication transparency.</p>
+        </article>
+
+        <article class="q reveal" data-answer="D">
+          <p class="q-text"><span class="q-no">Q3</span> The ICT officer's view on encryption reflects which fallacy?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-opt="A"><span class="key">A</span> Transport cost is zero</button>
+            <button class="opt" type="button" data-opt="B"><span class="key">B</span> Bandwidth is infinite</button>
+            <button class="opt" type="button" data-opt="C"><span class="key">C</span> Latency is zero</button>
+            <button class="opt" type="button" data-opt="D"><span class="key">D</span> The network is secure</button>
+          </div>
+          <p class="why"><b>D.</b> Assuming the internal network is safe ignores insiders, malware and sniffing. Traffic between servers should still be encrypted and mutually authenticated.</p>
+        </article>
+
+        <article class="q reveal" data-answer="A">
+          <p class="q-text"><span class="q-no">Q4</span> Adding more application servers to handle December peaks is called:</p>
+          <div class="opts">
+            <button class="opt" type="button" data-opt="A"><span class="key">A</span> Scaling out (horizontal)</button>
+            <button class="opt" type="button" data-opt="B"><span class="key">B</span> Time-sharing</button>
+            <button class="opt" type="button" data-opt="C"><span class="key">C</span> Grid computing</button>
+            <button class="opt" type="button" data-opt="D"><span class="key">D</span> Scaling up (vertical)</button>
+          </div>
+          <p class="why"><b>A.</b> Adding more machines of similar size is horizontal scaling. Vertical scaling would be buying one bigger machine.</p>
+        </article>
+
+        <article class="q reveal" data-answer="D">
+          <p class="q-text"><span class="q-no">Q5</span> Which architecture best describes the vendor's proposal?</p>
+          <div class="opts">
+            <button class="opt" type="button" data-opt="A"><span class="key">A</span> Grid computing</button>
+            <button class="opt" type="button" data-opt="B"><span class="key">B</span> Peer-to-peer</button>
+            <button class="opt" type="button" data-opt="C"><span class="key">C</span> Mainframe time-sharing</button>
+            <button class="opt" type="button" data-opt="D"><span class="key">D</span> Three-tier client–server</button>
+          </div>
+          <p class="why"><b>D.</b> Mobile app (presentation), app servers (logic) and database (data) form a three-tier design. The group discussion that follows is the interesting part: what new risks does a second site introduce?</p>
+        </article>
+      </div>
+
+      <div class="quiz-score reveal">
+        <span id="score-text">0 / 5 answered</span>
+        <span class="score-bar" aria-hidden="true"><span class="score-fill" id="score-fill"></span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================= TAKEAWAYS ==== -->
+  <section class="section" id="takeaways">
+    <div class="wrap">
+      <div class="reveal" style="margin-bottom:2rem">
+        <p class="eyebrow"><span class="sec-num">11</span> Wrap-up</p>
+        <h2 class="sec-title">What I am taking from Module 01</h2>
+      </div>
+
+      <div class="takeaways">
+        <ul class="take-list reveal">
+          <li><span class="mk">01</span><span>Computing has swung between <b>centralised and decentralised</b> models; cloud is the latest centralised wave</span></li>
+          <li><span class="mk">02</span><span>A distributed system hides many machines behind one coherent service using <b>transparency</b></span></li>
+          <li><span class="mk">03</span><span>Cluster, grid, utility, cloud and edge differ in <b>ownership, coupling and use</b></span></li>
+          <li><span class="mk">04</span><span>The <b>eight fallacies</b> explain many real outages and security weaknesses</span></li>
+          <li><span class="mk">05</span><span><b>Design for failure</b>: assume nodes and networks will fail, then test it — I did, and the traceback is above</span></li>
+        </ul>
+
+        <div class="next-card reveal">
+          <span class="nxt">Module 02 → next</span>
+          <h3>Introduction to Cloud Computing</h3>
+          <p>The NIST definition, essential characteristics and enabling technologies — the vocabulary everything else in this track is built on.</p>
+          <div class="refs">
+            <h4>Reading</h4>
+            <ul>
+              <li>Tanenbaum &amp; van Steen (2013), Ch. 1</li>
+              <li>Coulouris et al. (2011), Ch. 1–2</li>
+              <li>Buyya et al. (2011), Ch. 1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div>
+      <p style="margin-bottom:.7rem"><strong>cloud-computing-security</strong> — a working portfolio for cloud computing and cloud security.</p>
+      <p>Module 01 · Distributed Computing. Built as a studying tool: every claim comes from the module material, every number in the lab came from this machine.</p>
+    </div>
+    <div class="skills" aria-label="Skills practised">
+      <span class="chip">distributed systems</span>
+      <span class="chip">TCP/IP</span>
+      <span class="chip">latency analysis</span>
+      <span class="chip">fault tolerance</span>
+      <span class="chip">Python sockets</span>
+      <span class="chip">chaos engineering</span>
+      <span class="chip">threat modelling</span>
+    </div>
+  </div>
+</footer>
+
+<script src="assets/js/main.js" defer></script>
+</body>
+</html>
