@@ -10,10 +10,11 @@
     var targets = links
       .map(function (a) { return document.querySelector(a.getAttribute("href")); })
       .filter(Boolean);
-    var ticking = false;
 
+    /* Runs directly in the scroll handler rather than through
+       requestAnimationFrame: rAF is suspended in background tabs and on some
+       low-power scroll paths, which left the rail and progress bar frozen. */
     function update() {
-      ticking = false;
       var root = document.documentElement;
       var scrolled = window.pageYOffset || root.scrollTop;
       var height = root.scrollHeight - root.clientHeight;
@@ -34,14 +35,8 @@
       });
     }
 
-    function request() {
-      if (ticking) return;
-      ticking = true;
-      window.requestAnimationFrame(update);
-    }
-
-    window.addEventListener("scroll", request, { passive: true });
-    window.addEventListener("resize", request);
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
     update();
   }
 
