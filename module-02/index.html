@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 02 — Cloud fundamentals · Cloud computing security</title>
+<meta name="description" content="The NIST SP 800-145 definition of cloud computing, its five essential characteristics and the risks each one creates, virtualisation and hypervisors, and a lab that measures AWS regions and this machine's own hypervisor." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 02</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 02 — cloud fundamentals</p>
+      <h1 id="page-title">“Cloud” is a definition, not a metaphor.</h1>
+      <p class="lede">
+        NIST SP 800-145 defines cloud with five essential characteristics, three service models and four
+        deployment models. Those numbers decide what is shared, who controls what, and where new risk appears.
+        This module takes the definition apart, then looks at the machine actually running underneath it.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#definition">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>the definition</span><span>nist sp 800-145</span></div>
+        <p class="defcard__quote">
+          A model for convenient, on-demand network access to a shared pool of configurable computing
+          resources that can be rapidly provisioned and released with minimal management effort.
+          <cite>NIST SP 800-145 (2011) — three pages, and the basis of every exam question on this</cite>
+        </p>
+        <dl class="triad">
+          <div><dt>essential characteristics</dt><dd>5</dd></div>
+          <div><dt>service models</dt><dd>3</dd></div>
+          <div><dt>deployment models</dt><dd>4</dd></div>
+        </dl>
+        <p class="defcard__foot">Week 3 takes the three and the four apart. This page is about the five.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>02 — cloud fundamentals</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Foundation, two of fifteen</dd>
+      </div>
+      <div>
+        <dt>lab</dt>
+        <dd>2 hours, AWS regions and virtualisation</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>42 regions, 4 handshakes, 1 hypervisor</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week02</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#definition" data-spy><span>01</span>The definition is a test</a></li>
+        <li><a href="#characteristics" data-spy><span>02</span>Five characteristics, five risks</a></li>
+        <li><a href="#virtualisation" data-spy><span>03</span>Virtualisation, the engine</a></li>
+        <li><a href="#launch" data-spy><span>04</span>What a launch request does</a></li>
+        <li><a href="#compare" data-spy><span>05</span>On-premises vs cloud</a></li>
+        <li><a href="#ledger" data-spy><span>06</span>Benefits and risks</a></li>
+        <li><a href="#case" data-spy><span>07</span>Elasticity under pressure</a></li>
+        <li><a href="#uses" data-spy><span>08</span>Where it is used</a></li>
+        <li><a href="#lab" data-spy><span>09</span>Lab evidence</a></li>
+        <li><a href="#quiz" data-spy><span>10</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>11</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 11 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#definition"><span>01</span>The definition is a test</a></li>
+          <li><a href="#characteristics"><span>02</span>Five characteristics, five risks</a></li>
+          <li><a href="#virtualisation"><span>03</span>Virtualisation, the engine</a></li>
+          <li><a href="#launch"><span>04</span>What a launch request does</a></li>
+          <li><a href="#compare"><span>05</span>On-premises vs cloud</a></li>
+          <li><a href="#ledger"><span>06</span>Benefits and risks</a></li>
+          <li><a href="#case"><span>07</span>Elasticity under pressure</a></li>
+          <li><a href="#uses"><span>08</span>Where it is used</a></li>
+          <li><a href="#lab"><span>09</span>Lab evidence</a></li>
+          <li><a href="#quiz"><span>10</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>11</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="definition" aria-labelledby="def-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="def-h">The definition is a test you can fail</h2>
+            <p>“Minimal management effort”, “shared pool”, “rapidly provisioned and released” — each phrase rules something out.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            NIST's wording is deliberately operational. A machine you rent by the month, provision by ticket,
+            and cannot release when you are done satisfies none of it. Read the phrases as requirements:
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>What each phrase in the NIST definition excludes</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Phrase</th>
+                  <th scope="col">What it requires</th>
+                  <th scope="col">What it excludes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>On-demand network access</td>
+                  <td>You reach it over standard network protocols, when you ask</td>
+                  <td>A service only reachable from the provider's site</td>
+                </tr>
+                <tr>
+                  <td>Shared pool of resources</td>
+                  <td>Capacity is pooled and allocated to many customers</td>
+                  <td>Hardware dedicated to one tenant by design</td>
+                </tr>
+                <tr>
+                  <td>Rapidly provisioned and released</td>
+                  <td>Capacity appears and disappears in minutes, at scale</td>
+                  <td>A procurement cycle measured in weeks</td>
+                </tr>
+                <tr>
+                  <td>Minimal management effort</td>
+                  <td>The customer does not build or maintain the physical layer</td>
+                  <td>A contract where you still rack the servers</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <aside class="note">
+            <p class="note__label">why the definition matters for security</p>
+            <p>
+              Each phrase names something the customer no longer controls. No physical access, no rack-level
+              isolation, no view of the network between tenants — so assurance has to come from
+              <strong>contracts, configuration and logging</strong> instead. That is the whole shape of cloud
+              security, and it is decided here, in week two.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="characteristics" aria-labelledby="chars-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="chars-h">Five characteristics, and the risk each one quietly creates</h2>
+            <p>Every convenience in the left of this table has a matching failure mode. They are not opposites — they are the same feature seen from two sides.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The five essential characteristics (NIST SP 800-145)</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Characteristic</th>
+                  <th scope="col">What it gives you</th>
+                  <th scope="col">What it costs you in security</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>On-demand self-service</td>
+                  <td>Users provision servers or storage themselves through a portal or API — no waiting for IT.</td>
+                  <td>Shadow IT: resources that exist, cost money and appear in no inventory.</td>
+                </tr>
+                <tr>
+                  <td>Broad network access</td>
+                  <td>Services are reached over the network from phones, laptops and servers using standard protocols.</td>
+                  <td>Every endpoint is exposed to the internet; authentication becomes the front door.</td>
+                </tr>
+                <tr>
+                  <td>Resource pooling</td>
+                  <td>Many tenants share hardware; physical location is abstracted away.</td>
+                  <td>Multi-tenancy risk: isolation rests on the hypervisor, and you cannot see your neighbours.</td>
+                </tr>
+                <tr>
+                  <td>Rapid elasticity</td>
+                  <td>Capacity grows and shrinks quickly, often automatically, to match demand.</td>
+                  <td>Bill shock and untracked assets: the estate changes faster than the register does.</td>
+                </tr>
+                <tr>
+                  <td>Measured service</td>
+                  <td>Usage is metered — CPU hours, GB stored, requests — for billing and reporting.</td>
+                  <td>Not a risk but a gift: the same metering is evidence for detection and anomaly alerts.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Self-test</h3>
+          <p>Names first, definitions hidden. Open each one and check yourself rather than reading down the list.</p>
+
+          <div class="selftest">
+            <details>
+              <summary><span class="sum-num">01</span><span class="sum-title">On-demand self-service</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>Users provision servers or storage themselves through a portal or API, with no waiting for IT and no human in the loop.</p>
+                <p class="risk">resources nobody tracks. Self-service without a permission boundary is how organisations discover they own twelve test databases.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">02</span><span class="sum-title">Broad network access</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>Services are reachable over the network from phones, laptops and servers, using standard protocols.</p>
+                <p class="risk">the attack surface is the internet. Anything reachable is scanned continuously, usually within minutes.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">03</span><span class="sum-title">Resource pooling</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>The provider serves many customers from shared hardware, and abstracts where that hardware physically sits.</p>
+                <p class="risk">isolation depends entirely on the hypervisor. A hypervisor flaw can break it between tenants — a VM escape.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">04</span><span class="sum-title">Rapid elasticity</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>Capacity grows and shrinks quickly, often automatically, to match demand.</p>
+                <p class="risk">cost and inventory both move faster than people do. The bill and the asset register drift apart.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">05</span><span class="sum-title">Measured service</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>Usage is metered — CPU hours, gigabytes stored, requests served — for billing, reporting and control.</p>
+                <p class="risk">the opposite of one: metering is the cheapest detection signal in the cloud. A sudden egress spike usually shows up on a bill before it shows up in an alert.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="virtualisation" aria-labelledby="virt-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="virt-h">Virtualisation is the engine, and the hypervisor is the lock</h2>
+            <p>Resource pooling is not a business idea. It is a software layer that pretends one machine is many.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <dl class="layers">
+            <div>
+              <dt>Applications</dt>
+              <dd>Web servers, databases and business apps running inside each virtual machine.</dd>
+              <span class="tag-mono">tenant</span>
+            </div>
+            <div>
+              <dt>Guest operating systems</dt>
+              <dd>Each VM has its own OS — Linux, Windows — isolated from its neighbours.</dd>
+              <span class="tag-mono">tenant</span>
+            </div>
+            <div class="is-key">
+              <dt>Hypervisor</dt>
+              <dd>Creates and isolates the VMs, and shares CPU, memory and I/O between them.</dd>
+              <span class="tag-mono">provider</span>
+            </div>
+            <div>
+              <dt>Physical hardware</dt>
+              <dd>Servers, storage and network in the provider's data centre.</dd>
+              <span class="tag-mono">provider</span>
+            </div>
+          </dl>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Two hypervisor types</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Type</th>
+                  <th scope="col">Runs on</th>
+                  <th scope="col">Examples</th>
+                  <th scope="col">Where you meet it</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Type 1 — bare metal</td>
+                  <td>The hardware directly</td>
+                  <td class="id">KVM, Xen, VMware ESXi, Hyper-V</td>
+                  <td>Public clouds; AWS Nitro is built on KVM technology</td>
+                </tr>
+                <tr>
+                  <td>Type 2 — hosted</td>
+                  <td>A host operating system</td>
+                  <td class="id">VirtualBox, VMware Workstation</td>
+                  <td>Laptops, labs and — as it happens — the machine writing this</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Containers are the other half of the same idea: they share the host kernel instead of carrying a
+            full guest OS. Lighter, faster to start, and weaker isolation — there is no hypervisor boundary
+            between two containers on the same host.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">security impact</p>
+            <p>
+              <strong>Resource pooling</strong> only works because the hypervisor enforces separation. A
+              hypervisor flaw is therefore not one customer's problem — it is everyone on that host. This is
+              why provider patching and host-level isolation are things you ask a vendor about, in writing.
+            </p>
+          </aside>
+
+          <h3>Where I am running right now</h3>
+          <p>
+            The lab asks for this, so I checked the machine writing this page instead of describing
+            virtualisation abstractly:
+          </p>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Virtualisation facts of the machine this page was written on</caption>
+              <thead>
+                <tr><th scope="col">Check</th><th scope="col">Result</th><th scope="col">Meaning</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="mono">systemd-detect-virt</span></td><td class="id">oracle</td><td>Detected as a VirtualBox guest</td></tr>
+                <tr><td>DMI vendor / product</td><td class="id">innotek GmbH / VirtualBox</td><td>The virtual firmware identifies the host</td></tr>
+                <tr><td>CPU flags</td><td class="id">hypervisor</td><td>The CPU is itself telling me it is virtualised</td></tr>
+                <tr><td>Allocation</td><td class="id">4 vCPU · 4.7 GiB</td><td>4 cores of an Intel Core Ultra 7 255H, shared with the host</td></tr>
+                <tr><td>Kernel</td><td class="id">Linux 7.1.5+kali-amd64</td><td>The guest OS inside the VM</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            So the page you are reading was produced inside a <strong>Type 2</strong> guest: my own laptop's
+            processor, split into four virtual cores, with the host as the other tenant. Multi-tenancy turns
+            out to be something I can demonstrate on myself — and the reason it is normally safe is that a
+            hypervisor sits between the two, exactly as the diagram says.
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="launch" aria-labelledby="launch-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="launch-h">What happens when you click “Launch instance”</h2>
+            <p>Five steps, none of them involving a person at the provider. Open each one for what to watch at that stage.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="seq">
+            <details>
+              <summary><span class="sum-num">01</span><span class="sum-title">Request</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>You submit a request in the console, CLI or API, with your credentials attached.</p>
+                <p class="risk">the credentials themselves. A key committed to a public repository is a launch request waiting for someone else to send.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">02</span><span class="sum-title">Authenticate and authorise</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>IAM establishes who you are and whether policy allows the action — before anything is created.</p>
+                <p class="risk">over-broad policy. “Allow * on *” means one stolen key is the whole account, so this is the step where least privilege is either real or theatre.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">03</span><span class="sum-title">Schedule</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>The control plane picks a host with free capacity, in the zone you asked for.</p>
+                <p class="risk">nothing you can see. Placement is the provider's decision, which is exactly why “where is my data?” has to be answered by region, not by machine.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">04</span><span class="sum-title">Provision</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>The hypervisor creates the VM and attaches storage and network. This is the part that used to take weeks.</p>
+                <p class="risk">the defaults. A network interface with a public address and an open security group is a provisioning choice, made in seconds, that decides your exposure.</p>
+              </div>
+            </details>
+            <details>
+              <summary><span class="sum-num">05</span><span class="sum-title">Meter and log</span><span class="sum-hint"></span></summary>
+              <div class="reveal-body">
+                <p>Usage starts billing, and the API call is written to the audit log.</p>
+                <p class="risk">the log is only evidence if it is on and retained. CloudTrail-style history is the difference between an incident you can reconstruct and one you can only describe.</p>
+              </div>
+            </details>
+          </div>
+
+          <aside class="note">
+            <p class="note__label">the sentence this section exists for</p>
+            <p>
+              Every step is software. That is why cloud security is largely about <strong>identity,
+              configuration and logging</strong> — the three layers an attacker moves through after the
+              network stops being the boundary.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="compare" aria-labelledby="cmp-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="cmp-h">Traditional IT and cloud, on the factors that actually differ</h2>
+            <p>Cloud is not automatically cheaper or safer. It changes how cost and security are managed.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>On-premises compared with cloud</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Factor</th>
+                  <th scope="col">On-premises</th>
+                  <th scope="col">Cloud</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cost model</td>
+                  <td>Capital expenditure: buy servers up front</td>
+                  <td>Operating expenditure: pay as you go</td>
+                </tr>
+                <tr>
+                  <td>Provisioning time</td>
+                  <td>Weeks to months — procure, ship, install</td>
+                  <td>Minutes, through a portal or API</td>
+                </tr>
+                <tr>
+                  <td>Scaling</td>
+                  <td>Limited by hardware already bought</td>
+                  <td>Elastic; scale out or in on demand</td>
+                </tr>
+                <tr>
+                  <td>Maintenance</td>
+                  <td>Your team patches hardware and facilities</td>
+                  <td>The provider maintains the physical layer</td>
+                </tr>
+                <tr>
+                  <td>Security responsibility</td>
+                  <td>Entirely yours</td>
+                  <td>Shared between provider and customer</td>
+                </tr>
+                <tr>
+                  <td>Geographic reach</td>
+                  <td>Your own sites only</td>
+                  <td>Many regions worldwide, in minutes</td>
+                </tr>
+                <tr>
+                  <td>Control and visibility</td>
+                  <td>Full physical control</td>
+                  <td>Less physical control; rely on provider assurance</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="ledger" aria-labelledby="led-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="led-h">Benefits, and the risks that arrive with them</h2>
+            <p>Most of the right-hand column is the customer's responsibility. That is the point of the module, and of week seven.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="ledger">
+            <div>
+              <h3>What adoption buys</h3>
+              <ul>
+                <li>Agility: launch new services in days, not quarters.</li>
+                <li>Elastic scale for peaks — exam results, Black Friday.</li>
+                <li>Lower upfront cost for start-ups and SMEs.</li>
+                <li>Built-in redundancy across zones and regions.</li>
+                <li>Access to advanced services: AI, analytics, managed security.</li>
+                <li>Global reach for diaspora and export customers.</li>
+              </ul>
+            </div>
+            <div class="risk">
+              <h3>What it hands you</h3>
+              <ul class="risk">
+                <li>Misconfiguration exposing data publicly.</li>
+                <li>Account takeover through weak credentials.</li>
+                <li>Reduced visibility and control over the physical layer.</li>
+                <li>Data sovereignty and legal compliance issues.</li>
+                <li>Vendor lock-in and unexpected costs.</li>
+                <li>Dependence on internet connectivity and provider uptime.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="case" aria-labelledby="case-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="case-h">Elasticity under pressure: Pokémon GO, July 2016</h2>
+            <p>Niantic ran the backend on Google Cloud — Kubernetes Engine and Cloud Datastore. Then the game shipped.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="bars" role="img" aria-label="Traffic at launch reached about 50 times the original target and 10 times the developer's worst-case estimate.">
+            <div class="bar-row">
+              <span>original target</span>
+              <span class="bar-track"><span class="bar-fill-x" style="width:2%"></span></span>
+              <span class="bar-val">1×</span>
+            </div>
+            <div class="bar-row">
+              <span>worst-case estimate</span>
+              <span class="bar-track"><span class="bar-fill-x" style="width:20%"></span></span>
+              <span class="bar-val">10×</span>
+            </div>
+            <div class="bar-row">
+              <span>launch peak</span>
+              <span class="bar-track"><span class="bar-fill-x is-peak" style="width:100%"></span></span>
+              <span class="bar-val">50×</span>
+            </div>
+          </div>
+          <p class="file-path">Traffic figures from the Google Cloud blog case study, as cited in the module material.</p>
+
+          <p>
+            Engineers scaled the container clusters and load balancing quickly to keep the game playable, and
+            players still saw outages in some regions while capacity caught up. A comparable on-premises
+            launch would have needed months to buy hardware.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">security impact</p>
+            <p>
+              Elasticity only helps if the whole path can scale — <strong>quotas, databases, load
+              balancers</strong> and the bill. Sudden scale also widens the attack surface: more instances,
+              more endpoints, more things created by automation and never reviewed. A university portal on
+              admission-results day has exactly the same shape.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="uses" aria-labelledby="uses-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="uses-h">Where this is already normal</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ul class="styles-list">
+            <li><b>Education</b> — learning management systems, online exams, student email (Google Workspace, Microsoft 365)</li>
+            <li><b>Fintech and banking</b> — digital lending, mobile banking back ends, fraud analytics</li>
+            <li><b>Government</b> — e-government portals, tax and registration services, open data</li>
+            <li><b>Health</b> — telemedicine, electronic records, lab results delivery</li>
+            <li><b>Agriculture</b> — weather and soil analytics, market price apps for farmers</li>
+            <li><b>AI and analytics</b> — training and serving models on rented GPUs</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="lab-h">Lab: regions, handshakes, and the hypervisor I am inside</h2>
+            <p>The exercise has two halves. One needed an account I do not have; the other I could run, so here is what each half actually produced.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week02 · regions_probe.py, ip-ranges.json, week02_regions.json, regions_run.log</p>
+
+          <h3>Half one — the account work</h3>
+          <p>
+            <span class="status status--planned">not run</span>&nbsp;
+            The lab asks for MFA, a billing alarm, launching and terminating a micro instance, and finding the
+            launch event in CloudTrail. That needs an AWS account, which I do not have in this environment, so
+            it is listed here as the next practical step rather than written up as if I had done it.
+          </p>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Steps still to do, in the order that makes them safe</caption>
+              <thead><tr><th scope="col">Step</th><th scope="col">Why it comes first</th></tr></thead>
+              <tbody>
+                <tr><td>Enable MFA on the root or lab user</td><td>A password alone is the single most common way an account is lost</td></tr>
+                <tr><td>Create a billing alarm or budget</td><td>Cost is the first symptom of a mistake you have not noticed yet</td></tr>
+                <tr><td>List regions and note <span class="mono">af-south-1</span></td><td>Cape Town is opt-in — a region you must enable before you can use it</td></tr>
+                <tr><td>Launch, time, and terminate a micro instance</td><td>Provisioning time is the claim the whole model rests on</td></tr>
+                <tr><td>Find the launch event in CloudTrail</td><td>If you cannot find your own action in the log, nobody can find an attacker's</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>Half two — what I could measure</h3>
+          <p>
+            AWS publishes every one of its IP prefixes in a single public JSON file, no credentials required.
+            That answers part of step three honestly: which regions exist, and how much of the service estate
+            each one holds.
+          </p>
+
+          <dl class="meta-strip" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+            <div><dt>source</dt><dd class="mono">ip-ranges.amazonaws.com</dd></div>
+            <div><dt>file size</dt><dd class="mono">2.8 MB</dd></div>
+            <div><dt>prefixes</dt><dd class="mono">10,755</dd></div>
+            <div><dt>regions</dt><dd class="mono">42</dd></div>
+          </dl>
+
+          <p>
+            Then the handshake. Five regional S3 endpoints, five samples each, from this VM — the same method as
+            module 01, so the numbers are comparable. Click a heading to sort.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl" data-sortable>
+              <caption>Regions published by AWS, four of five endpoints reachable from here</caption>
+              <thead>
+                <tr>
+                  <th scope="col" data-key="region"><button class="sort" type="button">Region</button></th>
+                  <th scope="col" data-key="city"><button class="sort" type="button">Location</button></th>
+                  <th scope="col" data-key="prefixes" data-numeric><button class="sort" type="button">Service prefixes</button></th>
+                  <th scope="col" data-key="avg" data-numeric><button class="sort" type="button">Avg handshake</button></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="id">af-south-1</td>
+                  <td>Cape Town</td>
+                  <td class="num" data-v="139">139</td>
+                  <td class="num" data-v="84.8">84.8 ms</td>
+                </tr>
+                <tr>
+                  <td class="id">ap-south-1</td>
+                  <td>Mumbai</td>
+                  <td class="num" data-v="304">304</td>
+                  <td class="num" data-v="145.5">145.5 ms</td>
+                </tr>
+                <tr>
+                  <td class="id">eu-west-1</td>
+                  <td>Ireland</td>
+                  <td class="num" data-v="535">535</td>
+                  <td class="num" data-v="159.3">159.3 ms</td>
+                </tr>
+                <tr>
+                  <td class="id">us-east-1</td>
+                  <td>N. Virginia</td>
+                  <td class="num" data-v="1506">1,506</td>
+                  <td class="num" data-v="216.6">216.6 ms</td>
+                </tr>
+                <tr>
+                  <td class="id">me-south-1</td>
+                  <td>Bahrain</td>
+                  <td class="num" data-v="0">—</td>
+                  <td class="num" data-v="99999">no handshake</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Cape Town is closest by a wide margin and holds a small fraction of the service estate — 139
+            prefixes against 1,506 in N. Virginia. That gap is the real content of “region choice”: the nearest
+            region is usually not the most complete one, and latency and feature depth pull in opposite
+            directions. The Bahrain row is a failure I left in: the endpoint never completed a handshake from
+            here, and a lab that deletes its failures is not evidence of anything.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">security impact</p>
+            <p>
+              The same 42 regions are also <strong>42 legal jurisdictions</strong> and 42 different data
+              residency answers. Choosing a region is a compliance decision made by whoever types the region
+              code, which is usually a developer, at 11pm, without asking.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="quiz-h">Five questions on the Duka Online case</h2>
+            <p>A Nairobi electronics shop, two rented servers, and one Black Friday that ended in an hour.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz" id="quiz">
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q1</span>Servers that start automatically when traffic rises demonstrate which NIST characteristic?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>Measured service</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>Resource pooling</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>Broad network access</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>Rapid elasticity</span></label>
+              </div>
+              <p class="feedback" hidden><b>D. Rapid elasticity.</b> Capacity scaling out and in quickly, often automatically, is the definition of elasticity.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q2</span>A dashboard showing the cost of each service relies mainly on:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>Measured service</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>On-demand self-service</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>Hypervisor isolation</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>Broad network access</span></label>
+              </div>
+              <p class="feedback" hidden><b>A. Measured service.</b> Metering is what produces per-service cost reporting. Without it there is nothing to put on the dashboard.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q3</span>The finance director's worry that “we don't know which machine our data is on” relates to:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Type 2 hypervisors</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Measured service</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Rapid elasticity</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Resource pooling with location independence</span></label>
+              </div>
+              <p class="feedback" hidden><b>D. Resource pooling with location independence.</b> Pooling abstracts the physical machine; customers normally choose only a region, which is why “where is it?” has to be answered in policy rather than by pointing at a server.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q4</span>The best control for the “anyone can create servers” risk is:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>Disable the cloud portal</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>Budgets and alerts plus IAM permissions limiting who can launch what</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>Buy more physical servers</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>Use a Type 2 hypervisor</span></label>
+              </div>
+              <p class="feedback" hidden><b>B. Budgets and alerts plus IAM permissions.</b> Self-service should be governed, not removed: permissions decide who may act, budgets bound what it can cost.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q5</span>Moving from buying servers to paying monthly for usage changes the cost model from:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>Fixed to free</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>Licensed to open source</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>OpEx to CapEx</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>CapEx to OpEx</span></label>
+              </div>
+              <p class="feedback" hidden><b>D. CapEx to OpEx.</b> Capital expenditure on hardware becomes operating expenditure on services — which is why cost control becomes a continuous job rather than a purchase decision.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="take-h">What I am taking from module 02</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>NIST defines cloud with <b>five characteristics, three service models and four deployment models</b> — and the definition is testable, not decorative.</span></li>
+            <li><span class="n">02</span><span>Virtualisation and hypervisors let many tenants share hardware <b>if isolation holds</b>; the hypervisor is the lock, and its flaws are everybody's.</span></li>
+            <li><span class="n">03</span><span>Cloud moves cost from <b>CapEx to OpEx</b> and provisioning from weeks to minutes.</span></li>
+            <li><span class="n">04</span><span>Every cloud action is an <b>API call</b>: identity, configuration and logging are the security surface.</span></li>
+            <li><span class="n">05</span><span>The benefits are real and so are the risks — and most of the risks land on <b>the customer</b>, not the provider.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 03</p>
+            <h3><a href="../index.html#m03">Service and deployment models →</a></h3>
+            <p>SaaS, PaaS and IaaS, and public, private, community and hybrid: the architecture of each, and where the responsibility line actually falls.</p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>NIST SP 800-145 (2011) — three pages, and worth reading twice</li>
+              <li>Buyya et al. (2011), <em>Cloud Computing: Principles and Paradigms</em>, Ch. 1</li>
+              <li>Velte et al. (2009), <em>Cloud Computing: A Practical Approach</em>, Ch. 1–2</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-01/index.html"><span>previous</span>← Module 01 — distributed computing</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 02 of a cloud computing and cloud security portfolio. Worked from the module material; the
+      region data, handshakes and hypervisor facts in section 09 were produced on this machine and the
+      script is committed with them.
+    </p>
+    <p class="foot__meta">
+      <span>updated 16 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

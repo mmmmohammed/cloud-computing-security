@@ -9,6 +9,9 @@ __pycache__/
 .venv/
 venv/
 
+# Cached bulk data — the lab script re-downloads it
+labs/week02/ip-ranges.json
+
 # Local tooling and secrets — never committed
 .tools/
 .env

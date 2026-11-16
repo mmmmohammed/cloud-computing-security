@@ -170,10 +170,60 @@
     });
   }
 
+  /* ------------------------------------------------ sortable data tables -- */
+
+  function sortableTables() {
+    var tables = document.querySelectorAll('table[data-sortable]');
+    if (!tables.length) return;
+
+    Array.prototype.forEach.call(tables, function (table) {
+      var body = table.tBodies[0];
+      if (!body) return;
+
+      var headers = Array.prototype.slice.call(table.querySelectorAll('th[data-key]'));
+
+      headers.forEach(function (th) {
+        var button = th.querySelector('button');
+        if (!button) return;
+
+        button.addEventListener('click', function () {
+          var index = Array.prototype.indexOf.call(th.parentNode.children, th);
+          var numeric = th.hasAttribute('data-numeric');
+          var ascending = th.getAttribute('aria-sort') !== 'ascending';
+
+          headers.forEach(function (other) { other.removeAttribute('aria-sort'); });
+          th.setAttribute('aria-sort', ascending ? 'ascending' : 'descending');
+
+          var rows = Array.prototype.slice.call(body.rows);
+          rows.sort(function (a, b) {
+            var av = cellValue(a.cells[index]);
+            var bv = cellValue(b.cells[index]);
+            if (numeric) {
+              var an = parseFloat(av);
+              var bn = parseFloat(bv);
+              if (isNaN(an)) an = Infinity;
+              if (isNaN(bn)) bn = Infinity;
+              return ascending ? an - bn : bn - an;
+            }
+            return ascending ? String(av).localeCompare(bv) : String(bv).localeCompare(av);
+          });
+
+          rows.forEach(function (row) { body.appendChild(row); });
+        });
+      });
+    });
+
+    function cellValue(cell) {
+      if (!cell) return '';
+      return cell.hasAttribute('data-v') ? cell.getAttribute('data-v') : cell.textContent.trim();
+    }
+  }
+
   function init() {
     readingPosition();
     quiz();
     timing();
+    sortableTables();
   }
 
   if (document.readyState === "loading") {

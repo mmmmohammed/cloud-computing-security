@@ -1,0 +1,40 @@
+{
+  "source": "https://ip-ranges.amazonaws.com/ip-ranges.json",
+  "published_regions": 42,
+  "prefixes": 10755,
+  "sync_token": "1794807425",
+  "measured": [
+    {
+      "region": "af-south-1",
+      "city": "Cape Town",
+      "ip": "3.5.202.70",
+      "min_ms": 81.1,
+      "avg_ms": 84.8,
+      "prefixes": 139
+    },
+    {
+      "region": "ap-south-1",
+      "city": "Mumbai",
+      "ip": "3.5.211.102",
+      "min_ms": 144.0,
+      "avg_ms": 145.5,
+      "prefixes": 304
+    },
+    {
+      "region": "eu-west-1",
+      "city": "Ireland",
+      "ip": "52.92.16.216",
+      "min_ms": 157.8,
+      "avg_ms": 159.3,
+      "prefixes": 535
+    },
+    {
+      "region": "us-east-1",
+      "city": "N. Virginia",
+      "ip": "16.15.254.115",
+      "min_ms": 213.8,
+      "avg_ms": 216.6,
+      "prefixes": 1506
+    }
+  ]
+}

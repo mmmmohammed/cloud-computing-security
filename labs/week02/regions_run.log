@@ -1,0 +1,9 @@
+ip-ranges.json: 2.8 MB, 10755 prefixes, sync token 1794807425, published 2026-11-16-05-37-05
+regions published by AWS: 42
+af-south-1   Cape Town     3.5.202.70       avg    84.8 ms    139 prefixes
+me-south-1   Bahrain       no handshake
+ap-south-1   Mumbai        3.5.211.102      avg   145.5 ms    304 prefixes
+eu-west-1    Ireland       52.92.16.216     avg   159.3 ms    535 prefixes
+us-east-1    N. Virginia   16.15.254.115    avg   216.6 ms   1506 prefixes
+
+wrote week02_regions.json (4 regions measured)
