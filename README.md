@@ -9,7 +9,8 @@ something runnable and explained rather than a set of slides.
 
 | # | Module | What is in it |
 |---|--------|----------------|
-| 01 | Distributed Computing | The six eras of computing, distributed-system properties and transparency, the eight fallacies, a socket lab that fails on purpose, and the SACCO case study quiz |
+| 01 | [Distributed Computing](module-01/index.html) | The six eras of computing, distributed-system properties and transparency, the eight fallacies, a socket lab that fails on purpose, and the SACCO case study quiz |
+| 02 | [Cloud Fundamentals](module-02/index.html) | The NIST SP 800-145 definition, five characteristics paired with the risks they create, virtualisation and hypervisors, the launch pipeline, and a lab reading 42 AWS regions from public data |
 
 ## Module 01 — what this covers
 
@@ -67,10 +68,13 @@ storm against an authentication service.
 ## Layout
 
 ```
-index.html                 the module page (single page, no build step)
-assets/css/styles.css      styling and animation
-assets/js/main.js          canvas topology, scroll reveals, flip cards, quiz
-labs/week01/               lab scripts, captured logs and the latency JSON
+index.html                 portfolio landing page, indexes the modules
+module-01/index.html       module 01 — distributed computing
+module-02/index.html       module 02 — cloud fundamentals
+assets/css/styles.css      one design system, shared by every page
+assets/js/main.js          contents rail, quiz, timing panel, sortable tables
+labs/week01/               socket lab scripts, captured logs, latency JSON
+labs/week02/               AWS region probe, dataset summary, captured output
 ```
 
 ## Run it locally
