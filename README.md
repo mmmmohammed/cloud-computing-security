@@ -3,6 +3,8 @@
 A working portfolio for cloud computing and cloud security: one module per topic, each turned into
 something runnable and explained rather than a set of slides.
 
+**Live:** https://mmmmohammed.github.io/cloud-computing-security/
+
 ## Modules
 
 | # | Module | What is in it |
