@@ -1,0 +1,47 @@
+commissioning before troubleshooting
+policy gate
+  [PASS] admin port not open to the internet
+  [PASS] IMDSv2 enforced
+  [PASS] root volume encrypted
+  [PASS] only HTTP/HTTPS exposed
+  [PASS] no access keys in bootstrap
+  [PASS] ownership tagged
+commissioned, answering after 0.01s
+
+fault 1 · blocked
+  symptom   connection refused from the network, though the process is running
+  evidence  status 0 · 127.0.0.9:8080
+  cause     the listener was bound to 127.0.0.9, so nothing answers on 127.0.0.1 — the local equivalent of a security-group rule that excludes your address
+  fix       restore the intended listen address, reload, re-test
+  verified  200  ok
+
+fault 2 · service down
+  symptom   site unreachable; nothing answers on the port
+  evidence  status 0 · nothing listening on 8080
+  cause     nginx was not running — no listener, so the TCP connection is refused before HTTP exists
+  fix       start the service, then confirm with a request rather than a process check
+  verified  200  ok
+
+fault 3 · config error
+  symptom   service will not (re)start after a change
+  evidence  status 0 · 2026/11/17 04:05:00 [emerg] 74436#74436: unknown directive "worker_processes_on_holiday" in labs/week06/runtime/nginx.conf:31 | nginx: configuration file labs/week06/runtime/nginx.conf test failed
+  cause     an unknown directive was appended to the config; nginx validates the whole file before it starts
+  fix       restore the generated config (never hand-edit), re-run nginx -t, then start
+  verified  200  ok
+
+fault 4 · permissions
+  symptom   403 Forbidden for a page that exists
+  evidence  status 403 · 127.0.0.1:8080
+  cause     the document was mode 000 — the worker could not read it, so nginx returned 403 rather than 404
+  fix       restore readable permissions (0644), and check ownership the same way
+  verified  200  ok
+
+fault 5 · dead upstream
+  symptom   one route returns 502 while the rest of the site is fine
+  evidence  status 502 · 127.0.0.1:8080
+  cause     proxy_pass pointed at 127.0.0.1:9099 where nothing was listening; the error log names the refused connection
+  fix       start the upstream service and re-test the same route
+  verified  200  ok
+
+5 faults reproduced, diagnosed and fixed · problems: none
+wrote troubleshoot.json

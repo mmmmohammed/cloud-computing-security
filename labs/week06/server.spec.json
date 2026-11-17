@@ -1,0 +1,20 @@
+{
+  "name": "safari-tours-web",
+  "image": "ubuntu-22.04-hardened",
+  "instance_type": "t3.micro",
+  "region": "af-south-1",
+  "ports": {
+    "http": 8080,
+    "https": 8443
+  },
+  "ssh_cidr": "197.248.10.25/32",
+  "imds_tokens": "required",
+  "encrypted_volume": true,
+  "root_volume_gb": 20,
+  "bootstrap": "bootstrap.sh",
+  "tags": {
+    "Owner": "ict",
+    "Project": "safari-tours",
+    "Environment": "lab"
+  }
+}

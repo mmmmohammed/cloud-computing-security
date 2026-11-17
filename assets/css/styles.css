@@ -1420,6 +1420,26 @@ details[open] > summary .sum-hint::after { content: "hide"; }
   color: var(--ink-2);
 }
 
+/* screenshots (module 06) */
+.shot {
+  margin: var(--s5) 0;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: var(--s3);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+}
+.shot figcaption {
+  margin-top: var(--s2);
+  font-size: var(--fs-meta);
+  color: var(--ink-3);
+}
+.code__tag--fail { color: var(--accent); border-color: currentColor; }
+
 /* signing stepper (module 04) */
 .step { margin-top: var(--s3); }
 .step__label {

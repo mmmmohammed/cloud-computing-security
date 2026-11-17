@@ -1,0 +1,90 @@
+{
+  "faults": [
+    {
+      "name": "blocked",
+      "symptom": "connection refused from the network, though the process is running",
+      "evidence": {
+        "request": "GET /",
+        "status": 0,
+        "ms": 0.3,
+        "listening": "127.0.0.9:8080",
+        "nginx_t": "ok",
+        "error_log": [
+          "2026/11/17 04:03:58 [error] 73873#73873: *3 open() \"labs/week06/site/index.html\" failed (13: Permission denied), client: 127.0.0.1, server: , request: \"GET / HTTP/1.1\", host: \"127.0.0.1:8080\"",
+          "2026/11/17 04:03:58 [error] 73877#73877: *2 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: , request: \"GET /api/ HTTP/1.1\", upstream: \"http://127.0.0.1:9099/\", host: \"127.0.0.1:8080\""
+        ]
+      },
+      "cause": "the listener was bound to 127.0.0.9, so nothing answers on 127.0.0.1 \u2014 the local equivalent of a security-group rule that excludes your address",
+      "fix": "restore the intended listen address, reload, re-test",
+      "verified": 200
+    },
+    {
+      "name": "service down",
+      "symptom": "site unreachable; nothing answers on the port",
+      "evidence": {
+        "request": "GET /",
+        "status": 0,
+        "ms": 0.5,
+        "listening": "nothing listening on 8080",
+        "nginx_t": "ok",
+        "error_log": [
+          "2026/11/17 04:03:58 [error] 73873#73873: *3 open() \"labs/week06/site/index.html\" failed (13: Permission denied), client: 127.0.0.1, server: , request: \"GET / HTTP/1.1\", host: \"127.0.0.1:8080\"",
+          "2026/11/17 04:03:58 [error] 73877#73877: *2 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: , request: \"GET /api/ HTTP/1.1\", upstream: \"http://127.0.0.1:9099/\", host: \"127.0.0.1:8080\""
+        ]
+      },
+      "cause": "nginx was not running \u2014 no listener, so the TCP connection is refused before HTTP exists",
+      "fix": "start the service, then confirm with a request rather than a process check",
+      "verified": 200
+    },
+    {
+      "name": "config error",
+      "symptom": "service will not (re)start after a change",
+      "evidence": {
+        "nginx_t": "2026/11/17 04:05:00 [emerg] 74436#74436: unknown directive \"worker_processes_on_holiday\" in labs/week06/runtime/nginx.conf:31 | nginx: configuration file labs/week06/runtime/nginx.conf test failed",
+        "status_before_fix": 0,
+        "restart_refused": "True"
+      },
+      "cause": "an unknown directive was appended to the config; nginx validates the whole file before it starts",
+      "fix": "restore the generated config (never hand-edit), re-run nginx -t, then start",
+      "verified": 200
+    },
+    {
+      "name": "permission denied",
+      "symptom": "403 Forbidden for a page that exists",
+      "evidence": {
+        "request": "GET /",
+        "status": 403,
+        "ms": 0.4,
+        "listening": "127.0.0.1:8080",
+        "nginx_t": "ok",
+        "error_log": [
+          "2026/11/17 04:03:58 [error] 73877#73877: *2 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: , request: \"GET /api/ HTTP/1.1\", upstream: \"http://127.0.0.1:9099/\", host: \"127.0.0.1:8080\"",
+          "2026/11/17 04:05:01 [error] 74450#74450: *3 open() \"labs/week06/site/index.html\" failed (13: Permission denied), client: 127.0.0.1, server: , request: \"GET / HTTP/1.1\", host: \"127.0.0.1:8080\""
+        ]
+      },
+      "cause": "the document was mode 000 \u2014 the worker could not read it, so nginx returned 403 rather than 404",
+      "fix": "restore readable permissions (0644), and check ownership the same way",
+      "verified": 200
+    },
+    {
+      "name": "dead upstream",
+      "symptom": "one route returns 502 while the rest of the site is fine",
+      "evidence": {
+        "request": "GET /api/",
+        "status": 502,
+        "ms": 0.7,
+        "listening": "127.0.0.1:8080",
+        "nginx_t": "ok",
+        "error_log": [
+          "2026/11/17 04:05:01 [error] 74450#74450: *3 open() \"labs/week06/site/index.html\" failed (13: Permission denied), client: 127.0.0.1, server: , request: \"GET / HTTP/1.1\", host: \"127.0.0.1:8080\"",
+          "2026/11/17 04:05:01 [error] 74454#74454: *2 connect() failed (111: Connection refused) while connecting to upstream, client: 127.0.0.1, server: , request: \"GET /api/ HTTP/1.1\", upstream: \"http://127.0.0.1:9099/\", host: \"127.0.0.1:8080\""
+        ]
+      },
+      "cause": "proxy_pass pointed at 127.0.0.1:9099 where nothing was listening; the error log names the refused connection",
+      "fix": "start the upstream service and re-test the same route",
+      "verified": 200
+    }
+  ],
+  "problems": [],
+  "finished_at": "2026-11-17T09:05:02Z"
+}

@@ -1,0 +1,26 @@
+commissioning safari-tours-web from server.spec.json
+  image ubuntu-22.04-hardened · type t3.micro · region af-south-1
+
+policy gate
+  [PASS] admin port not open to the internet
+  [PASS] IMDSv2 enforced
+  [PASS] root volume encrypted
+  [PASS] only HTTP/HTTPS exposed
+  [PASS] no access keys in bootstrap
+  [PASS] ownership tagged
+
+bootstrap
+  [bootstrap] 1/4 preparing document root at labs/week06/site
+  [bootstrap] 2/4 checking the page exists
+  [bootstrap] 3/4 writing the build stamp
+  [bootstrap] 4/4 nothing to install — nginx is already present on this host
+  [bootstrap] done
+
+render and start
+  nginx -t: ok
+  listening on 127.0.0.1:8080 after 0.01s
+  GET / → 200 in 0.5 ms
+
+commissioned in 0.03s — 6 policy checks passed
+  build record: runtime/build.json
+  still running as pid 71023; stop with: python3 provision.py --stop

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Booking server — commissioned</title>
+<style>
+  :root { color-scheme: light dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: grid; place-items: center;
+    background: #fcfbf7; color: #15171b;
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #101114; color: #ecebe6; }
+    .card { background: #1a1c21 !important; border-color: #2b2d32 !important; }
+    .row + .row { border-color: #2b2d32 !important; }
+    .muted { color: #8d8d88 !important; }
+  }
+  .card {
+    width: min(46rem, calc(100vw - 3rem));
+    border: 1px solid #d9d7cf; background: #fff;
+    padding: 2rem 2.25rem;
+  }
+  .tag {
+    font: 500 0.7rem/1 ui-monospace, monospace; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #9a3412;
+  }
+  h1 { font-size: 1.6rem; margin: 0.6rem 0 0.4rem; letter-spacing: -0.015em; }
+  p { margin: 0 0 1.4rem; }
+  .muted { color: #6b6b66; font-size: 0.95rem; }
+  .rows { border-top: 1px solid #e4e2da; margin-top: 1.6rem; }
+  .row { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid #e4e2da; font-size: 0.92rem; }
+  .row span:first-child { color: #6b6b66; }
+  .ok { font: 500 0.78rem/1 ui-monospace, monospace; color: #2ea043; }
+  code { font-family: ui-monospace, monospace; font-size: 0.88em; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <p class="tag">commissioned server · module 06</p>
+    <h1>Safari Tours — booking server</h1>
+    <p>
+      This page is being served by the nginx instance that <code>bootstrap.sh</code> installed when the
+      server was built. Nothing here was uploaded by hand: the document root, the config and the hardening
+      flags all came from <code>server.spec.json</code>.
+    </p>
+    <p class="muted">
+      If you can read this in a browser, commissioning worked. If you cannot, start with the evidence in
+      <code>labs/week06/troubleshoot.py</code> — that is the whole method.
+    </p>
+    <div class="rows">
+      <div class="row"><span>document root</span><span><code>labs/week06/site</code></span></div>
+      <div class="row"><span>server tokens</span><span class="ok">OFF</span></div>
+      <div class="row"><span>directory listing</span><span class="ok">OFF</span></div>
+      <div class="row"><span>bound to</span><span><code>127.0.0.1:8080</code></span></div>
+      <div class="row"><span>built by</span><span><code>provision.py</code></span></div>
+    </div>
+  </main>
+</body>
+</html>

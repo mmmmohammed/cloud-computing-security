@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 06 — Commissioning and troubleshooting cloud servers · Cloud computing security</title>
+<meta name="description" content="The secure commissioning path, a policy gate that refuses an insecure spec, a hardening checklist, and five real faults injected into a real nginx then diagnosed with evidence." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 06</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 06 — commissioning and troubleshooting</p>
+      <h1 id="page-title">A secure server takes two minutes. So does an insecure one.</h1>
+      <p class="lede">
+        Every rushed launch leaves the same fingerprints: SSH open to the world, a key on disk, an unpatched
+        image, a volume nobody encrypted. This module builds a server the repeatable way — spec, policy gate,
+        bootstrap, verify — then breaks it five different ways to practise the part that actually gets tested at
+        2 a.m.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#commission">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>this build, measured</span><span>local</span></div>
+        <dl class="factlist">
+          <div><dt>6 / 6</dt><dd>policy checks passed — the bad spec fails four of them.</dd></div>
+          <div><dt>0.03 s</dt><dd>commissioned from spec to a verified <span class="mono">200</span>.</dd></div>
+          <div><dt>5</dt><dd>faults injected, diagnosed and fixed, one change at a time.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>06 — commissioning and troubleshooting</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Intermediate, six of fifteen</dd>
+      </div>
+      <div>
+        <dt>builds on</dt>
+        <dd>04 signed APIs · 05 control planes</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>policy gate, build record, 5 diagnosed faults</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week06</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#commission" data-spy><span>01</span>The secure commissioning path</a></li>
+        <li><a href="#gate" data-spy><span>02</span>Refuse to build an insecure server</a></li>
+        <li><a href="#cli" data-spy><span>03</span>The same build, in CLI flags</a></li>
+        <li><a href="#iac" data-spy><span>04</span>Infrastructure as code</a></li>
+        <li><a href="#harden" data-spy><span>05</span>The hardening checklist</a></li>
+        <li><a href="#method" data-spy><span>06</span>A method, not a hunch</a></li>
+        <li><a href="#symptoms" data-spy><span>07</span>Symptom to cause</a></li>
+        <li><a href="#gitlab" data-spy><span>08</span>Troubleshooting as an incident</a></li>
+        <li><a href="#lab" data-spy><span>09</span>Lab evidence</a></li>
+        <li><a href="#case" data-spy><span>10</span>Safari Tours</a></li>
+        <li><a href="#quiz" data-spy><span>11</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>12</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 12 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#commission"><span>01</span>The secure commissioning path</a></li>
+          <li><a href="#gate"><span>02</span>Refuse to build an insecure server</a></li>
+          <li><a href="#cli"><span>03</span>The same build, in CLI flags</a></li>
+          <li><a href="#iac"><span>04</span>Infrastructure as code</a></li>
+          <li><a href="#harden"><span>05</span>The hardening checklist</a></li>
+          <li><a href="#method"><span>06</span>A method, not a hunch</a></li>
+          <li><a href="#symptoms"><span>07</span>Symptom to cause</a></li>
+          <li><a href="#gitlab"><span>08</span>Troubleshooting as an incident</a></li>
+          <li><a href="#lab"><span>09</span>Lab evidence</a></li>
+          <li><a href="#case"><span>10</span>Safari Tours</a></li>
+          <li><a href="#quiz"><span>11</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>12</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="commission" aria-labelledby="comm-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="comm-h">Six steps, and every one of them is a security decision</h2>
+            <p>Repeatability is the security property. If every server is built the same way from code, you review it once and trust every copy.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Commissioning a server</caption>
+              <thead>
+                <tr><th scope="col">Step</th><th scope="col">What you choose</th><th scope="col">What goes wrong when it is rushed</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td><b>Region and image</b> — nearest region for latency and residency; a trusted, patched image</td><td>A stale community image with a default account, or data stored in a country you did not intend</td></tr>
+                <tr><td class="num">2</td><td><b>Size and key pair</b> — the instance type; a key you protect</td><td>A private key in a shared drive, or in the repo, or in a chat message</td></tr>
+                <tr><td class="num">3</td><td><b>Network and firewall</b> — the right subnet; only the ports you need, from the addresses you know</td><td>SSH open to <span class="mono">0.0.0.0/0</span>: the internet starts guessing within minutes</td></tr>
+                <tr><td class="num">4</td><td><b>Storage and role</b> — an encrypted volume; an IAM role instead of keys</td><td>Long-lived access keys in <span class="mono">~/.aws</span> on the server itself</td></tr>
+                <tr><td class="num">5</td><td><b>Bootstrap</b> — user-data installs patches, software and the logging agent at first boot</td><td>Hand-configured servers that drift, and cannot be rebuilt</td></tr>
+                <tr><td class="num">6</td><td><b>Verify and tag</b> — test access, confirm logging, tag owner and project</td><td>The "nobody knows how it was built" problem, three months later</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The lab implements this as a pipeline: a spec file, a gate that refuses bad values, a bootstrap script
+            that runs once, then a verification step that asks the server whether it is actually serving. The
+            build record it writes is the "how was this built" answer that Safari Tours does not have.
+          </p>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="gate" aria-labelledby="gate-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="gate-h">The most useful line of code is the one that refuses to build</h2>
+            <p>A policy gate turns a hardening checklist into something that cannot be forgotten at 5 p.m. on a Friday.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            Configuration scanning tools — Checkov and tfsec for templates, CIS Benchmarks for hosts — exist because
+            review is unreliable and time pressure is not. The lab version is six checks in front of the build. The
+            good spec passes all six; the deliberately bad spec fails four:
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 provision.py --spec server.spec.bad.json</span><span class="code__tag code__tag--fail">refused</span></p>
+<pre><span class="c-prompt">$</span> python3 provision.py --spec server.spec.bad.json
+commissioning safari-tours-web from server.spec.bad.json
+  image ubuntu-22.04 · type t3.micro · region af-south-1
+
+policy gate
+  [FAIL] admin port not open to the internet
+         ssh_cidr is '0.0.0.0/0' — 0.0.0.0/0 would expose SSH to every scanner on the internet
+  [FAIL] IMDSv2 enforced
+         imds_tokens is 'optional' — 'required' blocks SSRF credential theft
+  [FAIL] root volume encrypted
+         encrypted_volume must be true
+  [PASS] only HTTP/HTTPS exposed
+  [PASS] no access keys in bootstrap
+  [FAIL] ownership tagged
+         tags must include Owner and Project so the server can be found later
+
+<span class="c-dim">build refused — fix the spec, not the checker</span></pre>
+          </div>
+
+          <p>
+            That last line is the whole culture of the thing. A gate whose output is "just override it" teaches
+            people to override it; a gate that names the field and the reason teaches them what the field is for.
+            And the server was never built — the failure cost nothing, which is the point of moving the check
+            earlier than production.
+          </p>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="cli" aria-labelledby="cli-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="cli-h">The same build in CLI flags, and why three of them matter</h2>
+            <p>The commands say what safe defaults look like — and each flag is a decision you can explain.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="code">
+            <p class="code__head"><span>shell · from the deck</span><span class="code__tag">the secure launch</span></p>
+<pre>aws ec2 create-key-pair --key-name web-key \
+  --query KeyMaterial --output text &gt; web-key.pem
+chmod 400 web-key.pem
+
+aws ec2 create-security-group --group-name web-sg \
+  --description "Web tier" --vpc-id vpc-0abc
+
+aws ec2 authorize-security-group-ingress --group-id sg-0123 \
+  --protocol tcp --port 22 --cidr 197.248.10.25/32          # one address, not the world
+aws ec2 authorize-security-group-ingress --group-id sg-0123 \
+  --protocol tcp --port 443 --cidr 0.0.0.0/0                # the service, not the shell
+
+aws ec2 run-instances --image-id ami-0xyz --instance-type t3.micro \
+  --key-name web-key --security-group-ids sg-0123 \
+  --iam-instance-profile Name=web-role \                    # a role, not a key on disk
+  --metadata-options HttpTokens=required \                  # IMDSv2, blocks SSRF theft
+  --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"Encrypted":true}}]' \
+  --user-data file://bootstrap.sh \
+  --tag-specifications 'ResourceType=instance,Tags=[{Key=Owner,Value=ict}]'</pre>
+          </div>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Four flags that decide whether this server is a headline</caption>
+              <thead>
+                <tr><th scope="col">Flag</th><th scope="col">What it prevents</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="mono">chmod 400</span> on the key</td><td>SSH refuses keys other users can read — and a key in a shared folder is already lost</td></tr>
+                <tr><td><span class="mono">--cidr 197.248.10.25/32</span> for SSH</td><td>Every automated scanner on the internet guessing at port 22</td></tr>
+                <tr><td><span class="mono">HttpTokens=required</span></td><td>SSRF in the web app reaching the metadata service — IMDSv2 needs a token obtained by PUT, which simple request forgery cannot do</td></tr>
+                <tr><td><span class="mono">Ebs Encrypted:true</span></td><td>Reading the volume, or its snapshots, from outside the instance</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The metadata flag is the one worth memorising. In 2019 the Capital One breach used exactly this path: a
+            misconfigured web application, a server-side request to <span class="mono">169.254.169.254</span>, and a
+            role's credentials returned in the response. IMDSv2 does not make SSRF impossible; it makes the
+            credential theft through it need a request the attacker's primitive cannot send.
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="iac" aria-labelledby="iac-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="iac-h">At scale, the build has to live in a file</h2>
+            <p>Six tools that turn "we always do it this way" into something a reviewer can diff.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Infrastructure as code, and what each part is for</caption>
+              <thead>
+                <tr><th scope="col">Tool</th><th scope="col">Job</th><th scope="col">What it does not solve</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">CloudFormation</th><td>Native AWS templates that create a whole stack in one step</td><td>Provider lock-in — the template is AWS-shaped</td></tr>
+                <tr><th scope="row">Terraform / OpenTofu</th><td>The same workflow across AWS, Azure, Google Cloud and OpenStack</td><td>State files become a secret of their own</td></tr>
+                <tr><th scope="row">Ansible</th><td>Post-launch configuration: packages, hardening, services</td><td>Drift on machines that were changed by hand afterwards</td></tr>
+                <tr><th scope="row">Golden images (Packer)</th><td>A pre-hardened base that every launch inherits</td><td>Images go stale — rebuild on a schedule</td></tr>
+                <tr><th scope="row">Checkov / tfsec</th><td>Scan templates for insecure settings before deploying</td><td>Only what the rules check; a clear scan is not a safe system</td></tr>
+                <tr><th scope="row">Version control</th><td>Every change reviewed, logged and reversible</td><td>Nothing, if people use it — that is the hard part</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The last row is doing more work than the others. A template in a repository answers "how was this
+            server built" with a commit, and answers "when did that change" with a blame. It is also the only row
+            that would have saved Safari Tours in section 10.
+          </p>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="harden" aria-labelledby="hard-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="hard-h">The checklist, split the way the failures actually divide</h2>
+            <p>Access and network on the left, system and data on the right. Most breaches start on the left.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="split">
+            <div>
+              <h3>Access and network</h3>
+              <ul>
+                <li>No SSH or RDP open to <span class="mono">0.0.0.0/0</span> — bastion, VPN or Session Manager</li>
+                <li>Password login disabled; keys or SSO only</li>
+                <li>IMDSv2 enforced on the metadata service</li>
+                <li>IAM roles, never access keys on disk</li>
+                <li>Databases in private subnets</li>
+              </ul>
+            </div>
+            <div>
+              <h3>System and data</h3>
+              <ul>
+                <li>Patched at first boot, and on a schedule</li>
+                <li>EBS volumes and snapshots encrypted</li>
+                <li>Unused packages and services removed</li>
+                <li>Logging and monitoring agents installed</li>
+                <li>CIS baseline applied; the build recorded in the inventory</li>
+              </ul>
+            </div>
+          </div>
+
+          <p>
+            The lab automates the left column (a gate) and records the right column (a build record). That split is
+            not arbitrary: the left is decidable from a spec, the right needs the host to exist — which is why one
+            is a check before the build and the other is verification after it.
+          </p>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="method" aria-labelledby="method-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="method-h">Six steps, and the discipline is in step four</h2>
+            <p>Change one thing at a time, and write down what happened. Everything else is a shortcut to working blind.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The troubleshooting method</caption>
+              <thead>
+                <tr><th scope="col">Step</th><th scope="col">Ask</th><th scope="col">In practice</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Define the problem</td><td>What exactly fails, for whom, since when? Reproduce it, or you are guessing.</td></tr>
+                <tr><td class="num">2</td><td>Gather evidence</td><td>Status code, listener, config test, error log, recent changes.</td></tr>
+                <tr><td class="num">3</td><td>Form a hypothesis</td><td>Work a layer at a time: network → host → service → application.</td></tr>
+                <tr><td class="num">4</td><td>Change one thing</td><td>One. Record the result, even when it is "no change".</td></tr>
+                <tr><td class="num">5</td><td>Fix and verify</td><td>Verify with the same test that failed, not with a different one that passes.</td></tr>
+                <tr><td class="num">6</td><td>Document</td><td>Update the runbook so the next person starts where you finished.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The lab's five faults are all diagnosed this way, and each one records the evidence bundle before the
+            fix: the status code, what was listening, what <span class="mono">nginx -t</span> said, and the last
+            lines of the error log. That is the deliverable the lab sheet asks for — symptom, evidence, cause, fix —
+            and it is the reason the fix is credible: it was verified against the test that failed.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the shortcut that becomes permanent</p>
+            <p>
+              Never "fix" reachability by opening ports to <span class="mono">0.0.0.0/0</span>, and never fix a
+              permission error by granting AdministratorAccess. Temporary shortcuts outlive the incident, and the
+              next audit finds them with your name on the change record.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="symptoms" aria-labelledby="sym-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="sym-h">Seven symptoms, and the one check that separates them</h2>
+            <p>Most instance problems announce themselves precisely. The skill is reading the announcement.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Symptom → likely cause → what to check</caption>
+              <thead>
+                <tr><th scope="col">Symptom</th><th scope="col">Likely cause</th><th scope="col">What to check</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>SSH times out</td><td>Blocked or unroutable</td><td>Security group inbound, NACL, route to the internet gateway, public IP assignment</td></tr>
+                <tr><td><span class="mono">Permission denied (publickey)</span></td><td>Wrong key or wrong user</td><td>The right <span class="mono">.pem</span>, permissions 400, the right default user</td></tr>
+                <tr><td>Stops right after launch</td><td>Volume or limit</td><td>State transition reason, EBS limits, KMS permissions on an encrypted volume</td></tr>
+                <tr><td>Status check failed — <b>instance</b></td><td>OS-level fault</td><td>System log, console screenshot, disk full, fstab or kernel errors</td></tr>
+                <tr><td>Status check failed — <b>system</b></td><td>Underlying host</td><td>Stop and start, to move the instance to healthy hardware</td></tr>
+                <tr><td>Site down but SSH works</td><td>Service or host firewall</td><td>Is nginx running? Port 80/443 allowed? ufw or firewalld on the host?</td></tr>
+                <tr><td><span class="mono">AccessDenied</span> on API calls</td><td>Missing IAM permission</td><td>Instance role policy, explicit denies, policy simulator</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            "Site down but SSH works" is the row the lab spends its time on, because it is the one where the
+            network is fine and the problem is inside. It also has the most varied causes: a stopped service, a
+            config that will not parse, a file the worker cannot read, a proxy pointing at nothing. Four different
+            faults, four different statuses — and one method.
+          </p>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="gitlab" aria-labelledby="gl-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="gl-h">GitLab, 31 January 2017: the fix was the incident</h2>
+            <p>Five backups failed at once, on the day they were needed. The post-mortem is required reading.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            While fighting a spam-driven load problem, an engineer working on the primary database ran a delete
+            command intended for a replica. About 300 GB of production data went before it was stopped. The
+            recovery — live-streamed, and published as a post-mortem — took most of a day from a staging snapshot,
+            and roughly six hours of data was lost. Several backup and replication mechanisms turned out not to be
+            working.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>What actually failed, and the control that would have caught it</caption>
+              <thead>
+                <tr><th scope="col">Failure</th><th scope="col">Control</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>A tired operator hit the wrong host</td><td>Prompts that show which server you are on; separate credentials for primary and replica</td></tr>
+                <tr><td>Production access was broad</td><td>Restricted, just-in-time access with a second pair of eyes for destructive commands</td></tr>
+                <tr><td>Backups were assumed to work</td><td>Restore tests on a schedule — a backup nobody restored is a hope</td></tr>
+                <tr><td>The runbook was in someone's head</td><td>A written, rehearsed procedure for losing the primary</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The lesson for this module is uncomfortable: troubleshooting is itself a change to production, and it
+            deserves the same care as a deployment. The lab enforces a small version of that discipline — one fault
+            at a time, evidence before the fix, verification after — which is easy to do when the stakes are a
+            localhost port and hard to remember when the stakes are a database.
+          </p>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="lab-h">Lab: commission it from a spec, then break it five ways</h2>
+            <p>A real nginx, a real policy gate, real faults — and the fixes verified against the test that failed.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week06 · server.spec.json, bootstrap.sh, provision.py, troubleshoot.py · logs: provision.log, troubleshoot.log</p>
+
+          <p>
+            The lab sheet asks for an AWS Learner Lab instance. That account does not exist, so the <b>cloud half is
+            not run</b>: no security group created through the API, no instance launched, no console screenshots.
+            What is run is everything that does not need an account, against a real server on this machine.
+            <b>Substituted:</b> a directory is the instance, the listen address is the security group, and the
+            "encrypted volume" is a flag the gate enforces rather than something cryptsetup did.
+          </p>
+
+          <h3>1 · commission from a spec</h3>
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week06/provision.py</span><span class="code__tag code__tag--ok">6/6 checks</span></p>
+<pre><span class="c-prompt">$</span> python3 provision.py
+commissioning safari-tours-web from server.spec.json
+  image ubuntu-22.04-hardened · type t3.micro · region af-south-1
+
+policy gate
+  [PASS] admin port not open to the internet
+  [PASS] IMDSv2 enforced
+  [PASS] root volume encrypted
+  [PASS] only HTTP/HTTPS exposed
+  [PASS] no access keys in bootstrap
+  [PASS] ownership tagged
+
+bootstrap
+  [bootstrap] 1/4 preparing document root at …/labs/week06/site
+  [bootstrap] 2/4 checking the page exists
+  [bootstrap] 3/4 writing the build stamp
+  [bootstrap] 4/4 nothing to install — nginx is already present on this host
+  [bootstrap] done
+
+render and start
+  nginx -t: ok
+  listening on 127.0.0.1:8080 after 0.01s
+  GET / → 200 in 0.5 ms
+
+<span class="c-ok">commissioned in 0.03s — 6 policy checks passed</span></pre>
+          </div>
+
+          <figure class="shot">
+            <img src="img/site-live.png" alt="The commissioned page as served by nginx at 127.0.0.1:8080: a card headed Safari Tours — booking server, listing document root, server tokens off, directory listing off, bound to 127.0.0.1:8080, built by provision.py." width="1280" height="820" />
+            <figcaption>
+              The commissioned server, in a browser: nothing uploaded by hand, everything from the spec. The
+              screenshot is a capture of the running site, not a mock-up.
+            </figcaption>
+          </figure>
+
+          <h3>2 · break it five ways</h3>
+          <p>
+            Each fault is induced for real, then diagnosed by collecting the same four pieces of evidence — status
+            code, listener, config test, error log — before anything is changed. The fix is then verified with the
+            request that failed.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Five faults · measured by labs/week06/troubleshoot.py</caption>
+              <thead>
+                <tr><th scope="col">Fault</th><th scope="col">What the user sees</th><th scope="col">Evidence</th><th scope="col">Cause and fix</th><th scope="col">After</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Blocked</td>
+                  <td>Connection refused, though the process runs</td>
+                  <td class="num">0</td>
+                  <td>Listener bound to <span class="mono">127.0.0.9</span> — nothing answers on <span class="mono">127.0.0.1</span>. Restore the listen address.</td>
+                  <td class="num">200</td>
+                </tr>
+                <tr>
+                  <td>Service down</td>
+                  <td>Site unreachable</td>
+                  <td class="num">0</td>
+                  <td>No process, so no listener, so the TCP connection is refused before HTTP exists. Start the service.</td>
+                  <td class="num">200</td>
+                </tr>
+                <tr>
+                  <td>Config error</td>
+                  <td>Service will not start after a change</td>
+                  <td class="id">emerg</td>
+                  <td><span class="mono">unknown directive "worker_processes_on_holiday" … nginx.conf:31</span> — nginx validates the whole file first. Restore the generated config, re-test.</td>
+                  <td class="num">200</td>
+                </tr>
+                <tr>
+                  <td>Permissions</td>
+                  <td>403 for a page that exists</td>
+                  <td class="num">403</td>
+                  <td>Document was mode <span class="mono">000</span>, so the worker could not read it. Restore 0644.</td>
+                  <td class="num">200</td>
+                </tr>
+                <tr>
+                  <td>Dead upstream</td>
+                  <td>One route returns 502, the rest is fine</td>
+                  <td class="num">502</td>
+                  <td><span class="mono">connect() failed (111: Connection refused) … upstream: "http://127.0.0.1:9099/"</span> — start the service the proxy points at.</td>
+                  <td class="num">200</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="code">
+            <p class="code__head"><span>tail of labs/week06/troubleshoot.log</span><span class="code__tag code__tag--ok">5/5 fixed</span></p>
+<pre>fault 4 · permissions
+  symptom   403 Forbidden for a page that exists
+  evidence  status 403 · 127.0.0.1:8080
+  cause     the document was mode 000 — the worker could not read it, so
+            nginx returned 403 rather than 404
+  fix       restore readable permissions (0644), and check ownership the same way
+  verified  200  ok
+
+fault 5 · dead upstream
+  symptom   one route returns 502 while the rest of the site is fine
+  evidence  status 502 · 127.0.0.1:8080
+  cause     proxy_pass pointed at 127.0.0.1:9099 where nothing was listening
+  fix       start the upstream service and re-test the same route
+  verified  200  ok
+
+<span class="c-ok">5 faults reproduced, diagnosed and fixed · problems: none</span></pre>
+          </div>
+
+          <aside class="note">
+            <p class="note__label">what this does not prove</p>
+            <p>
+              It is not AWS: no security groups, no IAM, no instance metadata, no console. It proves the
+              commissioning shape and the troubleshooting method against real software — a real web server, a real
+              config parser, real file permissions, a real refused connection. The cloud half stays marked not run
+              because it cannot be run here, not because it was inconvenient.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="case" aria-labelledby="case-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="case-h">Safari Tours: one instance, no documentation, and a manager with a plan</h2>
+            <p>Every finding here is a step from section 01 that was skipped.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The findings, and the commissioning step each one skipped</caption>
+              <thead>
+                <tr><th scope="col">Finding</th><th scope="col">Step skipped</th><th scope="col">Risk</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>SSH and RDP open to <span class="mono">0.0.0.0/0</span></td><td>Network and firewall</td><td>Automated exploitation, with no human needed</td></tr>
+                <tr><td><span class="mono">AdministratorAccess</span> key in <span class="mono">/home/ec2-user/.aws</span></td><td>Storage and role</td><td>Any read of that file is a full account compromise</td></tr>
+                <tr><td>Unencrypted volume</td><td>Storage</td><td>Snapshots, and anyone with the disk, get the data</td></tr>
+                <tr><td>System status check failing</td><td>Verify</td><td>The host, not the code — stop and start moves it</td></tr>
+                <tr><td>No documentation; contractor gone</td><td>Verify and tag</td><td>Nobody can rebuild it, which is why it is still like this</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Ranked by what can be done <em>today</em>, the key outranks the open ports: an admin key on disk is a
+            complete takeover the moment anything can read the filesystem, and open RDP is a machine doing the
+            guessing. Both are bad; one is finished and the other is a race.
+          </p>
+
+          <p>
+            The manager's request — open all ports so it works — is the moment the module is really about. The
+            answer is not "no": it is "here is what the port change would expose, here is the port the service
+            actually needs, and here is the rebuild that makes this the last time we have this conversation". A
+            server rebuilt from a template in version control is also the answer to "nobody knows how it was built".
+          </p>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="quiz-h">Five questions on Safari Tours</h2>
+            <p>Scenario in section 10. Answer, then compare — each one has an explanation.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz">
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q1</span>A failing SYSTEM status check most likely means:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>The SSH key is wrong</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>The security group blocks port 443</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>The website code has a bug</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>A problem with the underlying host</span></label>
+              </div>
+              <p class="feedback" hidden><b>D. The underlying host.</b> System checks monitor the hardware and hypervisor; instance checks monitor the guest OS. Stop and start to move the instance onto healthy hardware.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q2</span>What is the best first fix for the stored access key?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>Rename the folder</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>Deactivate and rotate the key, then attach a least-privilege IAM role</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>Encrypt the volume</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>Open port 22 wider</span></label>
+              </div>
+              <p class="feedback" hidden><b>B.</b> A key that has been on disk must be treated as stolen: deactivate, rotate, then remove the need for it with a role that grants only what the instance uses.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q3</span>How should you respond to the manager's request to open all ports?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Open the ports but disable logging</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Ignore the manager</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Do it temporarily</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Explain the risk and open only the ports the service needs</span></label>
+              </div>
+              <p class="feedback" hidden><b>D.</b> Least privilege applies to network access. Public traffic needs 80/443 only; admin access belongs on a bastion, VPN or Session Manager — and "temporarily" is how permanent exposures start.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q4</span>Which setting blocks credential theft through SSRF in the web app?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>IMDSv2 (HttpTokens=required)</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>A larger instance type</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>A public IP</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>Detailed monitoring</span></label>
+              </div>
+              <p class="feedback" hidden><b>A. IMDSv2.</b> It requires a session token obtained with a PUT request, which a simple server-side request forgery cannot perform. It does not remove SSRF; it removes the cheap path from SSRF to credentials.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q5</span>What would most prevent "nobody knows how it was built" in future?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>Bigger instances</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>A second contractor</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>Infrastructure as code in version control</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>More screenshots</span></label>
+              </div>
+              <p class="feedback" hidden><b>C.</b> A template in a repository documents the build, reviews the change and reproduces the server. Screenshots describe one moment; they do not rebuild anything.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 12 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take6-h">
+        <header class="sec-head">
+          <p class="sec-idx">12</p>
+          <div>
+            <h2 id="take6-h">What I am taking from module 06</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>Speed is neutral: the same two minutes build a secure server or an incident. <b>Repeatability is the control.</b></span></li>
+            <li><span class="n">02</span><span>Move the check earlier — a policy gate that refuses a bad spec costs nothing; the same finding in production costs a weekend.</span></li>
+            <li><span class="n">03</span><span>Four defaults carry most of the weight: <b>no open admin ports, IMDSv2, roles not keys, encryption</b>.</span></li>
+            <li><span class="n">04</span><span>Diagnose a layer at a time, change one thing, and verify with the test that failed.</span></li>
+            <li><span class="n">05</span><span>Documentation is a security control: a server nobody can rebuild is a server nobody can fix safely.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 07</p>
+            <h3>Cloud issues, challenges and provider lock-in</h3>
+            <p>Shared responsibility, lock-in and the core principles that survive whichever provider wins. <a href="../index.html#modules">Back to the module index →</a></p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>Reese (2009), <em>Cloud Application Architectures</em>, Ch. 4–5</li>
+              <li>AWS documentation, <em>Troubleshoot EC2 instances</em></li>
+              <li>CIS Amazon Linux Benchmark (overview)</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-05/index.html"><span>previous</span>← Module 05 — private cloud with Eucalyptus</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 06 of a cloud computing and cloud security portfolio. The build in
+      <span class="mono">labs/week06/provision.py</span> and the five faults in
+      <span class="mono">troubleshoot.py</span> run against a real nginx; the screenshot above is that server.
+    </p>
+    <p class="foot__meta">
+      <span>updated 17 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>
