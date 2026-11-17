@@ -1,0 +1,108 @@
+{
+  "account": "Tumaini Microfinance (case study from the deck)",
+  "cloudtrail_days": 90,
+  "users": [
+    {
+      "name": "root",
+      "root": true,
+      "mfa": true,
+      "keys": [],
+      "shared_by": 1
+    },
+    {
+      "name": "shared-loans-1",
+      "mfa": true,
+      "shared_by": 1,
+      "groups": [
+        "Developers"
+      ],
+      "keys": [
+        {
+          "id": "AKIA-SHARED-01",
+          "age_days": 0,
+          "last_used_days": 0
+        }
+      ]
+    },
+    {
+      "name": "shared-loans-2",
+      "mfa": true,
+      "shared_by": 1,
+      "groups": [
+        "Developers"
+      ],
+      "keys": [
+        {
+          "id": "AKIA-SHARED-02",
+          "age_days": 0,
+          "last_used_days": 0
+        }
+      ]
+    },
+    {
+      "name": "amina",
+      "mfa": true,
+      "groups": [
+        "Developers"
+      ],
+      "keys": [
+        {
+          "id": "AKIA-AMINA-01",
+          "age_days": 0,
+          "last_used_days": 0
+        }
+      ],
+      "shared_by": 1
+    },
+    {
+      "name": "juma",
+      "mfa": true,
+      "groups": [
+        "Auditors"
+      ],
+      "keys": [
+        {
+          "id": "AKIA-JUMA-01",
+          "age_days": 0,
+          "last_used_days": 0
+        }
+      ],
+      "shared_by": 1
+    }
+  ],
+  "groups": [
+    {
+      "name": "Developers",
+      "policies": [
+        "ScopedDeveloperPolicy"
+      ]
+    },
+    {
+      "name": "Auditors",
+      "policies": [
+        "ScopedDeveloperPolicy"
+      ]
+    }
+  ],
+  "roles": [
+    {
+      "name": "loan-app-function",
+      "policies": [
+        {
+          "Sid": "OnlyWhatTheFunctionUses",
+          "Effect": "Allow",
+          "Action": [
+            "s3:PutObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::loan-docs/*"
+          ]
+        }
+      ],
+      "needed": {
+        "action": "s3:PutObject",
+        "resource": "arn:aws:s3:::loan-docs/*"
+      }
+    }
+  ]
+}

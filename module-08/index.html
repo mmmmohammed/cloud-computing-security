@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 08 — Identity and access management with AWS IAM · Cloud computing security</title>
+<meta name="description" content="IAM building blocks, least-privilege policy design, the documented evaluation order implemented as a working engine (24 cases), and an access review of the Tumaini audit that turns 14 findings into zero." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 08</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 08 — identity and access management</p>
+      <h1 id="page-title">There is no office door to lock. Identity is the perimeter.</h1>
+      <p class="lede">
+        Anyone with valid credentials can reach the console from anywhere, so the question stops being “who is
+        inside the network” and becomes “what is this principal allowed to do, on which resource, under which
+        conditions”. This module implements AWS's documented evaluation order as a working engine, then audits a
+        real case-study account and takes it from fourteen findings to zero.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#blocks">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>what the code decided</span><span>week 08</span></div>
+        <dl class="factlist">
+          <div><dt>24 / 24</dt><dd>policy decisions matched the documented evaluation order.</dd></div>
+          <div><dt>14 → 0</dt><dd>findings in the Tumaini audit, before and after remediation.</dd></div>
+          <div><dt>9</dt><dd>privilege-escalation paths in one admin group, found by policy, not by review.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>08 — identity and access management</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Intermediate → advanced, eight of fifteen</dd>
+      </div>
+      <div>
+        <dt>builds on</dt>
+        <dd>07 shared responsibility · 06 hardening</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>policy engine (24 cases), access review, escalation scan</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week08</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#blocks" data-spy><span>01</span>Six building blocks</a></li>
+        <li><a href="#anatomy" data-spy><span>02</span>Anatomy of a least-privilege policy</a></li>
+        <li><a href="#logic" data-spy><span>03</span>How AWS decides</a></li>
+        <li><a href="#models" data-spy><span>04</span>RBAC and ABAC</a></li>
+        <li><a href="#federation" data-spy><span>05</span>Federation and single sign-on</a></li>
+        <li><a href="#practices" data-spy><span>06</span>Best practices and the tools that find excess</a></li>
+        <li><a href="#capitalone" data-spy><span>07</span>Capital One, 2019</a></li>
+        <li><a href="#lab" data-spy><span>08</span>Lab: the evaluation order, implemented</a></li>
+        <li><a href="#traces" data-spy><span>09</span>Lab: two decisions, traced</a></li>
+        <li><a href="#audit" data-spy><span>10</span>Lab: the Tumaini audit</a></li>
+        <li><a href="#plane" data-spy><span>11</span>The one-week plan</a></li>
+        <li><a href="#quiz" data-spy><span>12</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>13</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 13 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#blocks"><span>01</span>Six building blocks</a></li>
+          <li><a href="#anatomy"><span>02</span>Anatomy of a least-privilege policy</a></li>
+          <li><a href="#logic"><span>03</span>How AWS decides</a></li>
+          <li><a href="#models"><span>04</span>RBAC and ABAC</a></li>
+          <li><a href="#federation"><span>05</span>Federation and single sign-on</a></li>
+          <li><a href="#practices"><span>06</span>Best practices and the tools that find excess</a></li>
+          <li><a href="#capitalone"><span>07</span>Capital One, 2019</a></li>
+          <li><a href="#lab"><span>08</span>Lab: the evaluation order, implemented</a></li>
+          <li><a href="#traces"><span>09</span>Lab: two decisions, traced</a></li>
+          <li><a href="#audit"><span>10</span>Lab: the Tumaini audit</a></li>
+          <li><a href="#plane"><span>11</span>The one-week plan</a></li>
+          <li><a href="#quiz"><span>12</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>13</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="blocks" aria-labelledby="bl-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="bl-h">Six building blocks, and the one that should be temporary</h2>
+            <p>Every IAM design is a combination of these. Most breaches are a missing guard on one of them.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>IAM building blocks</caption>
+              <thead>
+                <tr><th scope="col">Block</th><th scope="col">What it is</th><th scope="col">How it goes wrong</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Root user</th><td>Created with the account, unlimited power, recoverable only by email and phone</td><td>No MFA, and an access key that never expires — the single worst credential in any account</td></tr>
+                <tr><th scope="row">Users and groups</th><td>Named identities with passwords or keys; groups carry permissions users inherit</td><td>One identity shared by a team, so CloudTrail records a username instead of a person</td></tr>
+                <tr><th scope="row">Roles</th><td>Identities assumed temporarily by services, other accounts or federated users</td><td>A role described as “the app's permissions” that can read every bucket in the account</td></tr>
+                <tr><th scope="row">Policies</th><td>JSON documents allowing or denying actions on resources — identity, resource, boundary, SCP</td><td><span class="mono">"Action": "*"</span>, because it worked first time</td></tr>
+                <tr><th scope="row">STS</th><td>Short-lived credentials issued when a role is assumed</td><td>Long sessions with no re-authentication, so revocation means deleting the role</td></tr>
+                <tr><th scope="row">Organizations &amp; Identity Center</th><td>Many accounts under guardrails; single sign-on for the workforce</td><td>An SCP written once and never tested, believed to be a control it is not</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The table has a direction of travel: <b>away from long-lived credentials</b>. Users with keys are the
+            legacy pattern; roles, federation and STS are the current one. Every breach in this module's reading
+            starts with a credential that was not temporary.
+          </p>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="anatomy" aria-labelledby="an-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="an-h">Anatomy of a policy that is actually least-privilege</h2>
+            <p>Five fields, and each one is a decision you can defend in a review.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="code">
+            <p class="code__head"><span>policy · read one bucket, with MFA, from the office</span><span class="code__tag">identity-based</span></p>
+<pre>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadReportsBucketOnly",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::finance-reports",
+        "arn:aws:s3:::finance-reports/*"
+      ],
+      "Condition": {
+        "Bool": {"aws:MultiFactorAuthPresent": "true"},
+        "IpAddress": {"aws:SourceIp": "197.248.0.0/16"}
+      }
+    }
+  ]
+}</pre>
+          </div>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>What each field is doing</caption>
+              <thead>
+                <tr><th scope="col">Field</th><th scope="col">The decision</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><span class="mono">Effect</span></td><td>Allow or Deny — and a Deny wins from anywhere in the policy set</td></tr>
+                <tr><td><span class="mono">Action</span></td><td>Two named API calls, not <span class="mono">s3:*</span></td></tr>
+                <tr><td><span class="mono">Resource</span></td><td>Two ARNs, because the bucket and its objects are different resources — a mistake that produces “access denied” for a policy that looks correct</td></tr>
+                <tr><td><span class="mono">Condition</span></td><td>MFA present <em>and</em> the request from one network range</td></tr>
+                <tr><td><span class="mono">Sid</span></td><td>A human-readable intent, so the next reviewer does not have to reconstruct it</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The Resource line is where beginners lose an hour. <span class="mono">s3:ListBucket</span> acts on the
+            bucket, <span class="mono">s3:GetObject</span> acts on the objects inside it. Granting
+            <span class="mono">arn:aws:s3:::finance-reports/*</span> for both looks sensible and silently fails the
+            listing. My engine has a case for exactly this, and it expects an explicit allow for the bucket ARN.
+          </p>
+
+          <h3>A role has two policies, and only one of them is about permissions</h3>
+          <p>
+            The policy above grants what a principal may do. A role additionally carries a <b>trust policy</b>,
+            which answers a different question: who is allowed to become this role at all. Confusing the two is how
+            people “fix” an access problem by widening trust, which hands the role to whoever the trust names —
+            often a whole account.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>trust policy · only this CI repository, only on its main branch</span><span class="code__tag">assume-role</span></p>
+<pre>{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {"Federated": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"},
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"},
+        "StringLike": {"token.actions.githubusercontent.com:sub": "repo:org/app:ref:refs/heads/main"}
+      }
+    }
+  ]
+}</pre>
+          </div>
+
+          <p>
+            This is the pattern that removes deployment keys entirely: the pipeline presents a token, the trust
+            policy decides whether that token may become the role, and the session lasts minutes. The
+            <span class="mono">sub</span> condition is the security-critical line — drop it and <em>any</em> branch
+            of <em>any</em> repository in the organisation can deploy to production, which is a real and repeated
+            finding.
+          </p>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="logic" aria-labelledby="lg-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="lg-h">Six steps, and step three ends the argument</h2>
+            <p>This is not a mental model to admire — it is an algorithm, and section 08 implements it.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>AWS policy evaluation order</caption>
+              <thead>
+                <tr><th scope="col">Step</th><th scope="col">What happens</th><th scope="col">Consequence</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Authenticate — signature and credentials verified</td><td>No identity, no request</td></tr>
+                <tr><td class="num">2</td><td>Collect the policies that apply</td><td>Identity, resource, boundary, session, SCP</td></tr>
+                <tr><td class="num">3</td><td>Any explicit Deny, anywhere</td><td><b>Immediate deny.</b> No allow can rescue it</td></tr>
+                <tr><td class="num">4</td><td>SCP and permissions boundary must allow</td><td>A guardrail narrower than the policy wins</td></tr>
+                <tr><td class="num">5</td><td>An identity or resource policy must allow</td><td>Either side can grant</td></tr>
+                <tr><td class="num">6</td><td>Otherwise</td><td>Implicit deny — the default for everything</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Two sentences carry the whole system. <b>Explicit deny beats any allow</b>, and <b>anything not
+            explicitly allowed is denied</b>. Together they explain why an SCP guardrail is such a strong control —
+            it does not need to enumerate what is permitted, only what is forbidden — and why adding a Deny is the
+            safest way to remove a capability you cannot delete.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the deny that outlives its author</p>
+            <p>
+              A Deny statement is permanent until someone removes it, and it silently wins over every future
+              Allow someone adds. That is a feature in a guardrail and a trap in a cleanup: when access “mysteriously
+              does not work”, search the policy set for Deny before rewriting the Allow.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="models" aria-labelledby="md-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="md-h">RBAC and ABAC: roles scale badly, tags scale dangerously</h2>
+            <p>The trade is between the number of policies and the number of things you must protect.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Role-based versus attribute-based access control</caption>
+              <thead>
+                <tr><th scope="col">Aspect</th><th scope="col">RBAC</th><th scope="col">ABAC</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Basis</th><td>Job role or group (Developer, Auditor)</td><td>Tags and attributes on principals and resources (Project=Afya, Env=prod)</td></tr>
+                <tr><th scope="row">Example</th><td>Auditors can read CloudTrail</td><td>You may start instances whose Project tag matches your own</td></tr>
+                <tr><th scope="row">Scaling</th><td>More roles and policies as teams grow</td><td>Fewer policies; new resources inherit access through tags</td></tr>
+                <tr><th scope="row">Risk</th><td>Role explosion, stale permissions</td><td>Tag tampering — whoever can edit tags can grant access</td></tr>
+                <tr><th scope="row">In AWS</th><td>Groups, roles, managed policies</td><td>Conditions on <span class="mono">aws:PrincipalTag</span> and <span class="mono">aws:ResourceTag</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The ABAC risk is structural, not accidental. If access is decided by a tag, then
+            <span class="mono">ec2:CreateTags</span> is an authorisation permission, and should be treated as one.
+            My engine has a case that compares the principal's Project tag against the resource's — and a second
+            case where they differ, which denies. Policy variables make that comparison possible:
+            <span class="mono">"${aws:ResourceTag/Project}"</span> on the expectation side resolves against the
+            request.
+          </p>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="federation" aria-labelledby="fd-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="fd-h">Federation: one person, one identity, no passwords to rotate</h2>
+            <p>The strongest IAM control is the one that removes IAM users from the picture.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Federation options</caption>
+              <thead>
+                <tr><th scope="col">Option</th><th scope="col">What it does</th><th scope="col">Use it when</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">SAML 2.0</th><td>An enterprise IdP (Entra ID, Okta, AD FS) asserts the user; AWS issues a role session</td><td>You already have a workforce directory with MFA</td></tr>
+                <tr><th scope="row">OIDC / OAuth 2.0</th><td>Token-based identity for apps — and for CI systems that deploy without stored keys</td><td>A pipeline needs to deploy without a key in its secrets store</td></tr>
+                <tr><th scope="row">Cognito</th><td>Customer-facing sign-up and sign-in with social and enterprise options</td><td>The identities are your app's users, not your staff</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The gains are the same four every time: one identity per person, central MFA, instant removal when
+            someone leaves, and no IAM passwords to manage. That last one is underrated — a departed employee with
+            an IAM user and a key is a live credential, which is precisely the finding the lab's audit opens with.
+          </p>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="practices" aria-labelledby="pr-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="pr-h">Seven practices, and the five tools that prove you followed them</h2>
+            <p>Each tool answers a question that review alone cannot: what is actually used, and by whom.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="split">
+            <div>
+              <h3>Practices</h3>
+              <ul>
+                <li>MFA on root and every human identity</li>
+                <li>No root access keys; credentials stored offline</li>
+                <li>Roles and temporary credentials over long-term keys</li>
+                <li>Least privilege — start small, add deliberately</li>
+                <li>Groups and SSO, not per-user policies</li>
+                <li>Rotate or delete unused keys and users</li>
+                <li>SCPs to deny risky actions across accounts</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Tools</h3>
+              <ul>
+                <li><b>Access Analyzer</b> — resources shared outside the account; least privilege from activity</li>
+                <li><b>Credential report</b> — users, key ages, MFA status in one table</li>
+                <li><b>Last accessed</b> — which permissions were never used</li>
+                <li><b>Policy simulator</b> — test a request before shipping the policy</li>
+                <li><b>CloudTrail</b> — who did what, when, from where</li>
+              </ul>
+            </div>
+          </div>
+
+          <p>
+            The credential report is the one an auditor will ask for, because it makes the uncomfortable facts
+            impossible to skim past: a row with <span class="mono">MFA = false</span> and a key 700 days old is a
+            finding in a table, not an opinion. The lab builds that table from a model of the account, then scores
+            the findings.
+          </p>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="capitalone" aria-labelledby="co-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="co-h">Capital One, 2019: one role, one SSRF, 106 million people</h2>
+            <p>Every element of this breach is a lesson from sections 03 and 06, in order.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            A misconfigured web application firewall on EC2 was vulnerable to server-side request forgery. The
+            attacker used it to query the instance metadata service and receive the temporary credentials of the
+            attached IAM role. That role could list and read far more S3 buckets than a WAF needed. Regulators
+            fined the bank <b>US$80 million</b>; a class action settled for <b>US$190 million</b>.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Each step, and the control that breaks the chain</caption>
+              <thead>
+                <tr><th scope="col">Step in the attack</th><th scope="col">Control that breaks it</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>SSRF in a public-facing application</td><td>Input validation and egress restrictions — the app never needed to reach the metadata address</td></tr>
+                <tr><td>Metadata service returns credentials</td><td><b>IMDSv2</b> (released late 2019): a token obtained by PUT, which simple request forgery cannot send</td></tr>
+                <tr><td>The role reads everything</td><td><b>Least privilege on the role</b> — the blast radius is the permission set, not the account</td></tr>
+                <tr><td>Stolen credentials used from an unusual place</td><td>Detection: GuardDuty and CloudTrail anomaly alerts, and a role that only ever appears in one region</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Notice that three of the four controls are cheap and one is a purchase. The expensive part of this
+            module is not the tooling; it is the discipline of writing a role that can do one thing, and the
+            organisational tolerance for the “access denied” tickets that follow.
+          </p>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="lab-h">Lab: implement the evaluation order, then try to break it</h2>
+            <p>The deck says “test policies with the simulator”. Without an account, the honest version is to build the simulator.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week08 · iam_eval.py, cases.json, access_review.py, tumaini.json · logs: access_review.log</p>
+
+          <p>
+            The lab sheet wants an AWS account: two users with MFA, a bucket policy, an EC2 role, a Deny that
+            overrides an Allow, the policy simulator, and a credential report. <b>No account exists, so no IAM
+            object was created</b> — no users, no bucket, no role, no console screenshots. What is run instead is
+            the part that needs no account: an evaluator that implements all six documented steps, and an audit
+            tool that stands in for the credential report and Access Analyzer.
+          </p>
+
+          <p>
+            The engine supports wildcards in actions and resources, <span class="mono">NotAction</span> and
+            <span class="mono">NotResource</span>, resource policies with <span class="mono">Principal</span>,
+            permissions boundaries, SCPs, policy variables, and the condition operators a review actually uses —
+            <span class="mono">Bool</span>, <span class="mono">StringEquals</span>/<span class="mono">Like</span>,
+            <span class="mono">IpAddress</span>, <span class="mono">ArnLike</span>,
+            <span class="mono">NumericLessThanEquals</span> and <span class="mono">Null</span>.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week08/iam_eval.py --test</span><span class="code__tag code__tag--ok">24/24</span></p>
+<pre><span class="c-prompt">$</span> python3 iam_eval.py --test
+24 cases from cases.json
+
+  ok   Developer reads the finance bucket
+       s3:GetObject on arn:aws:s3:::finance-reports/2026/q3.pdf
+       -&gt; ALLOW (allowed by identity policy ReadReportsBucketOnly)
+  ok   Developer reads a bucket the policy does not name
+       s3:GetObject on arn:aws:s3:::hr-payroll/salaries.xlsx
+       -&gt; DENY (implicit deny — no policy allows this action)
+  ok   The bucket listing is a separate resource
+       s3:ListBucket on arn:aws:s3:::finance-reports
+       -&gt; ALLOW (allowed by identity policy ReadReportsBucketOnly)
+  ok   Auditor reads CloudTrail
+  ok   Auditor tries to change the trail
+  ok   Explicit deny overrides an allow in the same policy set
+  ...
+  ok   ABAC — principal tag differs from the resource tag
+  ok   Resource policy grants a partner account
+  ok   NotAction — the excluded action is still denied
+  ok   Policy variable — someone else's home directory
+
+<span class="c-ok">24/24 decisions match the expectation</span></pre>
+          </div>
+
+          <h3>Where the engine is deliberately incomplete</h3>
+          <p>
+            A small evaluator is only useful if it is honest about its edges. These are the parts I did not
+            implement, and what each one would change:
+          </p>
+          <ul>
+            <li><b>Set operators</b> — <span class="mono">ForAllValues</span> and <span class="mono">ForAnyValue</span> on multi-valued keys, which change whether one bad value in a list of tags denies the request.</li>
+            <li><b>Session and principal policies</b> — the policies passed <em>at</em> AssumeRole time, which can only narrow an existing grant.</li>
+            <li><b>The Organizations hierarchy</b> — SCPs applied down a tree of OUs, where the effective permission is the intersection at every level.</li>
+            <li><b>Wildcards in <span class="mono">Principal</span></b> beyond ARN-shaped matching, and cross-account resource policies that in turn rely on the caller's identity policy.</li>
+          </ul>
+          <p>
+            None of these change the cases in the file, and all of them would matter in a real account. The list is
+            the difference between “I wrote a simulator” and “I wrote the whole of IAM”.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">what 24/24 does and does not mean</p>
+            <p>
+              It means the engine agrees with the expectations I wrote from AWS's documented behaviour — deny
+              precedence, guardrail order, both resource forms, condition semantics. It is not a conformance test
+              against AWS: no request in this lab ever reached the service. Where the two could differ, the
+              expectation is the part that would need checking against real IAM.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="traces" aria-labelledby="tr-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="tr-h">Two decisions, traced step by step</h2>
+            <p>The same request shape, two different reasons for the answer — which is the point of a trace.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="code">
+            <p class="code__head"><span>python3 iam_eval.py --explain "Explicit deny"</span><span class="code__tag code__tag--fail">deny</span></p>
+<pre><span class="c-prompt">$</span> python3 iam_eval.py --explain "Explicit deny"
+request: arn:aws:iam::111122223333:user/amina
+  action   s3:DeleteObject
+  resource arn:aws:s3:::finance-reports/2026/q3.pdf
+
+  1. authenticate    principal arn:aws:iam::111122223333:user/amina
+  2. collect policies 2 identity · 0 resource · 0 boundary · 0 SCP
+  3. explicit deny   identity policy NeverDeleteReports
+
+  decision: DENY — explicit deny in identity policy NeverDeleteReports</pre>
+          </div>
+
+          <p>
+            The evaluation stopped at step three and never looked at the allow that also matched. That is why the
+            same user can still write to the bucket: the Deny names <span class="mono">s3:DeleteObject</span> and
+            <span class="mono">s3:DeleteObjectVersion</span>, not the whole service. A Deny scoped too widely is how
+            a “fix” becomes an outage.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 iam_eval.py --explain "ABAC"</span><span class="code__tag code__tag--ok">allow</span></p>
+<pre><span class="c-prompt">$</span> python3 iam_eval.py --explain "ABAC"
+  action   ec2:StartInstances
+  resource arn:aws:ec2:af-south-1:111122223333:instance/i-0abc
+  context  aws:PrincipalTag/Project = afya
+  context  aws:ResourceTag/Project = afya
+
+  1. authenticate    principal arn:aws:iam::111122223333:user/daniel
+  2. collect policies 1 identity · 0 resource · 0 boundary · 0 SCP
+  3. explicit deny   none
+  4. guardrails      no SCP or boundary attached
+  5. explicit allow  identity policy StartOwnProjectInstances
+
+  decision: ALLOW — allowed by identity policy StartOwnProjectInstances</pre>
+          </div>
+
+          <p>
+            This one walks all five steps and the answer depends on a condition evaluated at step five: the
+            principal's Project tag resolved against the resource's, through
+            <span class="mono">${aws:ResourceTag/Project}</span>. Change one tag and the same request goes to
+            implicit deny — which the next case in the file asserts.
+          </p>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="audit" aria-labelledby="au-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="au-h">Lab: the Tumaini audit, scored and then remediated</h2>
+            <p>Fourteen findings, three of them critical, and a measurement of what fixing them changes.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            The deck's case study is an account in a known state: twelve staff on two shared users, root without
+            MFA and with an active key, a developers group holding AdministratorAccess, a departed employee's key
+            used two weeks ago, and a Lambda role with <span class="mono">s3:*</span> on every bucket. The review
+            tool takes a model of that account and produces what the credential report and Access Analyzer would.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week08/access_review.py --fix</span><span class="code__tag code__tag--fail">14 findings</span></p>
+<pre><span class="c-prompt">$</span> python3 access_review.py --fix
+credential report · Tumaini Microfinance (case study from the deck)
+  user              mfa  keys  oldest key  last used  note
+  root              NO   1     2140        14d        ROOT
+  brian.former      NO   1     700         14d        departed
+  shared-loans-1    NO   1     410         1d         shared by 8
+  shared-loans-2    NO   1     385         2d         shared by 4
+  juma              yes  1     120         3d
+  amina             yes  1     45          0d
+
+14 findings
+  [CRITICAL] Departed employee brian.former still has an active key
+  [CRITICAL] Root user has no MFA
+  [CRITICAL] Root user has an active access key
+  [HIGH    ] group Developers can escalate its own privileges
+  [HIGH    ] shared-loans-1 has no MFA
+  [HIGH    ] shared-loans-1 is shared by 8 people
+  [HIGH    ] shared-loans-2 has no MFA
+  [HIGH    ] shared-loans-2 is shared by 4 people
+  [HIGH    ] Group Developers carries AdministratorAccess
+  [HIGH    ] Role loan-app-function has a wildcard allow
+  [MEDIUM  ] shared-loans-1's key is 410 days old
+  [MEDIUM  ] shared-loans-2's key is 385 days old
+  [MEDIUM  ] juma's key is 120 days old
+  [MEDIUM  ] Role loan-app-function exceeds what it uses
+
+least privilege · loan-app-function
+  before: s3:* on *
+  after : ['s3:PutObject'] on ['arn:aws:s3:::loan-docs/*']
+
+summary: 3 critical · 7 high · 4 medium · 0 low
+
+after remediation
+  14 findings before, 0 after</pre>
+          </div>
+
+          <p>
+            Two findings in that list are worth reading twice. The escalation one is not a policy-review opinion: the
+            tool checks for <b>nine documented privilege-escalation pairs</b> — <span class="mono">iam:PassRole</span>
+            with <span class="mono">lambda:CreateFunction</span>, <span class="mono">iam:CreatePolicyVersion</span>
+            alone, <span class="mono">iam:AttachUserPolicy</span>, and so on — and AdministratorAccess matches all
+            of them. The “exceeds what it uses” finding is the least-privilege diff: one action on one ARN, which
+            is also the answer to the case study's second question.
+          </p>
+
+          <p>
+            The remediation is applied to the model, not to an account: MFA set, root stripped of keys, the departed
+            user removed, the admin group replaced with a scoped policy, and the role rewritten to the one action
+            it needs. Re-running the audit on the fixed model yields zero findings. That is a demonstration that the
+            rules account for every finding — not a claim that a real account was cleaned.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">root cannot be deleted</p>
+            <p>
+              My first version of the fix deleted the root user, which is impossible — AWS does not let you. The
+              remediation now keeps root, enables MFA and removes its access keys, which is the actual procedure.
+              A model that lets you do the wrong thing is worse than no model.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="plane" aria-labelledby="pl-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="pl-h">The one-week plan the manager asked for</h2>
+            <p>Ordered by what is being exploited right now, not by what is easiest to tick off.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Remediation in priority order</caption>
+              <thead>
+                <tr><th scope="col">Day</th><th scope="col">Action</th><th scope="col">Why first</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td>Disable the departed employee's key; pull CloudTrail for its use; enable root MFA and delete root access keys</td><td>An active credential outside the organisation and an unguarded root account are the only two things that can end the company this week</td></tr>
+                <tr><td class="num">1</td><td>Replace <span class="mono">AdministratorAccess</span> on Developers with a scoped policy; keep an MFA-protected break-glass role</td><td>Removes nine escalation paths from four people at once</td></tr>
+                <tr><td class="num">2</td><td>Scope the Lambda role to <span class="mono">s3:PutObject</span> on <span class="mono">loan-docs/*</span></td><td>The application's blast radius becomes one bucket</td></tr>
+                <tr><td class="num">3</td><td>Enforce MFA for every human identity, then require it in policy</td><td>Stops password replay and stolen-session use</td></tr>
+                <tr><td class="num">4–5</td><td>Replace the two shared users with per-person identities, then start SSO</td><td>Accountability — otherwise CloudTrail cannot answer “who”</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The order is the answer to “what should be done first”, and it is not the same as the order the findings
+            are printed in. A key held by someone who has left is an incident; a 385-day-old key belonging to a
+            current employee is a task. Both are findings; only one is on a clock.
+          </p>
+        </div>
+      </section>
+
+      <!-- 12 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">12</p>
+          <div>
+            <h2 id="quiz-h">Five questions on the audit</h2>
+            <p>Scenario in the deck's case study, and in section 10.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz">
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q1</span>What should be done FIRST?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>Rename the developers' group</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>Disable the ex-employee's key, investigate its use, and secure root (MFA, delete root keys)</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>Buy a SIEM</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>Rewrite the app</span></label>
+              </div>
+              <p class="feedback" hidden><b>B.</b> An active credential outside the organisation plus an unguarded root account are the two findings that can end the company this week. Everything else is a task; these are an incident.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q2</span>The correct permission for the Lambda role is:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>AdministratorAccess</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>s3:GetObject on *</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>s3:* on *</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>s3:PutObject on arn:aws:s3:::loan-docs/*</span></label>
+              </div>
+              <p class="feedback" hidden><b>D.</b> One action, on the objects of one bucket. The function writes loan documents; it has no business reading, listing or deleting anything, and no business in any other bucket.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q3</span>Shared IAM users mainly break:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Elasticity</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Accountability — actions cannot be traced to a person</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Encryption</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Latency</span></label>
+              </div>
+              <p class="feedback" hidden><b>B.</b> The audit trail records the username, never the human. That destroys both investigation and the ability to revoke one person's access without breaking a shift.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q4</span>A policy Allows s3:DeleteObject and an SCP Denies it. The result is:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>Allowed only with MFA</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>Depends on the region</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>Allowed</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>Denied</span></label>
+              </div>
+              <p class="feedback" hidden><b>D.</b> Step three: an explicit deny anywhere ends the evaluation. The engine returns that decision at step three and never reaches the allow.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q5</span>Which tool shows which permissions developers have not used in 90 days?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>IAM last-accessed information / Access Analyzer</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>S3 versioning</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>Route 53</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>EBS snapshots</span></label>
+              </div>
+              <p class="feedback" hidden><b>A.</b> Last-accessed data and Access Analyzer are the two sources that turn “might be unused” into a defensible decision. The review tool's key-age and last-used columns are the local stand-in for them.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 13 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take8-h">
+        <header class="sec-head">
+          <p class="sec-idx">13</p>
+          <div>
+            <h2 id="take8-h">What I am taking from module 08</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>Identity is the perimeter, and <b>long-lived credentials are the whole risk</b> — root keys, shared users, 700-day-old keys.</span></li>
+            <li><span class="n">02</span><span>Explicit deny beats any allow, and everything else is implicitly denied. Those two sentences are the algorithm.</span></li>
+            <li><span class="n">03</span><span>An admin group is not one finding; it is <b>nine escalation paths</b>, and a policy check finds them faster than a review.</span></li>
+            <li><span class="n">04</span><span>Least privilege is measurable: one action on one ARN, and a diff you can show someone.</span></li>
+            <li><span class="n">05</span><span>Prioritise by what is being exploited now — a departed employee's live key outranks a year-old key on a current one.</span></li>
+            <li><span class="n">06</span><span>Federation is the end state: no IAM users means nothing to share, rotate or forget to delete.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 09</p>
+            <h3>Securing cloud storage</h3>
+            <p>S3 and EBS, encryption, integrity and the public-bucket mistake. <a href="../index.html#modules">Back to the module index →</a></p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>AWS IAM User Guide — <em>Security best practices</em></li>
+              <li>NIST SP 800-210 — <em>Access Control Systems for Cloud Computing</em></li>
+              <li>Velte et al. (2009), Ch. 9</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-07/index.html"><span>previous</span>← Module 07 — issues, challenges and lock-in</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 08 of a cloud computing and cloud security portfolio. The policy decisions come from
+      <span class="mono">labs/week08/iam_eval.py</span> and the audit from
+      <span class="mono">access_review.py</span>; both run locally, because no AWS account exists.
+    </p>
+    <p class="foot__meta">
+      <span>updated 17 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

@@ -64,6 +64,7 @@
         <li><a href="#m05"><span>05</span>Private cloud with Eucalyptus</a></li>
         <li><a href="#m06"><span>06</span>Commissioning and troubleshooting</a></li>
         <li><a href="#m07"><span>07</span>Issues, challenges and lock-in</a></li>
+        <li><a href="#m08"><span>08</span>Identity and access management</a></li>
       </ol>
     </aside>
 
@@ -327,6 +328,41 @@
                 <tr>
                   <td>Read it</td>
                   <td><a href="module-07/index.html">module 07 — issues, challenges and lock-in →</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec" id="m08" aria-labelledby="m08-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="m08-h"><a href="module-08/index.html">Identity and access management</a></h2>
+            <p>Users, groups, roles and JSON policies; the documented evaluation order implemented as a working engine; and an audit that takes a real case-study account from fourteen findings to zero.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Module 08 at a glance</caption>
+              <tbody>
+                <tr>
+                  <td style="width:9rem">Topics</td>
+                  <td>root user, users, groups, roles, policies and STS · least-privilege policy anatomy · explicit deny and the six-step evaluation order · RBAC versus ABAC · SAML, OIDC and Cognito · the credential report, last-accessed data and Access Analyzer</td>
+                </tr>
+                <tr>
+                  <td>Lab</td>
+                  <td>A policy evaluator implementing all six documented steps — wildcards, NotAction, resource policies, boundaries, SCPs, conditions and policy variables</td>
+                </tr>
+                <tr>
+                  <td>Evidence</td>
+                  <td><b>24/24</b> policy decisions match the documented order; <b>14 → 0</b> findings in the Tumaini audit; <b>9</b> escalation paths found in one admin group</td>
+                </tr>
+                <tr>
+                  <td>Read it</td>
+                  <td><a href="module-08/index.html">module 08 — identity and access management →</a></td>
                 </tr>
               </tbody>
             </table>

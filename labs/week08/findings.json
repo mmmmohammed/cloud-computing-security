@@ -1,0 +1,181 @@
+{
+  "account": "Tumaini Microfinance (case study from the deck)",
+  "findings": [
+    {
+      "severity": "critical",
+      "area": "identity",
+      "title": "Departed employee brian.former still has an active key",
+      "evidence": "the account remains usable by whoever holds the key",
+      "fix": "Disable the user and its keys now, then review CloudTrail for its use"
+    },
+    {
+      "severity": "critical",
+      "area": "root",
+      "title": "Root user has no MFA",
+      "evidence": "root account can sign in with a password alone",
+      "fix": "Enable MFA on root, then store the credentials offline"
+    },
+    {
+      "severity": "critical",
+      "area": "root",
+      "title": "Root user has an active access key",
+      "evidence": "key AKIA-ROOT-0001 created 2140 days ago, last used 14 days ago",
+      "fix": "Delete the root access key; nothing should call AWS as root"
+    },
+    {
+      "severity": "high",
+      "area": "escalation",
+      "title": "group Developers can escalate its own privileges",
+      "evidence": "9 path(s): iam:PassRole + lambda:CreateFunction; iam:PassRole + ec2:RunInstances; iam:CreatePolicyVersion + * and 6 more. For example, create a function that runs as a more privileged role.",
+      "fix": "Remove one side of each pair, or add a permissions boundary and an SCP"
+    },
+    {
+      "severity": "high",
+      "area": "identity",
+      "title": "shared-loans-1 has no MFA",
+      "evidence": "console or API access without a second factor",
+      "fix": "Enforce MFA, then require it in policy with aws:MultiFactorAuthPresent"
+    },
+    {
+      "severity": "high",
+      "area": "identity",
+      "title": "shared-loans-1 is shared by 8 people",
+      "evidence": "CloudTrail records the user, never the human",
+      "fix": "Issue one identity per person, or federate to remove IAM users entirely"
+    },
+    {
+      "severity": "high",
+      "area": "identity",
+      "title": "shared-loans-2 has no MFA",
+      "evidence": "console or API access without a second factor",
+      "fix": "Enforce MFA, then require it in policy with aws:MultiFactorAuthPresent"
+    },
+    {
+      "severity": "high",
+      "area": "identity",
+      "title": "shared-loans-2 is shared by 4 people",
+      "evidence": "CloudTrail records the user, never the human",
+      "fix": "Issue one identity per person, or federate to remove IAM users entirely"
+    },
+    {
+      "severity": "high",
+      "area": "policy",
+      "title": "Group Developers carries AdministratorAccess",
+      "evidence": "members: shared-loans-1, shared-loans-2, amina, brian.former \u2014 full control of the account",
+      "fix": "Replace with a scoped policy; keep admin in a break-glass role with MFA and alerting"
+    },
+    {
+      "severity": "high",
+      "area": "policy",
+      "title": "Role loan-app-function has a wildcard allow",
+      "evidence": "Action '*' or a service wildcard with Resource '*'",
+      "fix": "Scope the action and the resource ARN to what the workload uses"
+    },
+    {
+      "severity": "medium",
+      "area": "keys",
+      "title": "shared-loans-1's key is 410 days old",
+      "evidence": "key AKIA-SHARED-01 is past a 90-day rotation window",
+      "fix": "Rotate the key; better, remove it and use a role"
+    },
+    {
+      "severity": "medium",
+      "area": "keys",
+      "title": "shared-loans-2's key is 385 days old",
+      "evidence": "key AKIA-SHARED-02 is past a 90-day rotation window",
+      "fix": "Rotate the key; better, remove it and use a role"
+    },
+    {
+      "severity": "medium",
+      "area": "keys",
+      "title": "juma's key is 120 days old",
+      "evidence": "key AKIA-JUMA-01 is past a 90-day rotation window",
+      "fix": "Rotate the key; better, remove it and use a role"
+    },
+    {
+      "severity": "medium",
+      "area": "policy",
+      "title": "Role loan-app-function exceeds what it uses",
+      "evidence": "it needs s3:PutObject on arn:aws:s3:::loan-docs/*",
+      "fix": "Replace with the minimal statement below"
+    }
+  ],
+  "credential_report": [
+    {
+      "user": "root",
+      "mfa": "NO",
+      "keys": 1,
+      "oldest_key_days": 2140,
+      "last_used_days": 14,
+      "note": "ROOT"
+    },
+    {
+      "user": "brian.former",
+      "mfa": "NO",
+      "keys": 1,
+      "oldest_key_days": 700,
+      "last_used_days": 14,
+      "note": "departed"
+    },
+    {
+      "user": "shared-loans-1",
+      "mfa": "NO",
+      "keys": 1,
+      "oldest_key_days": 410,
+      "last_used_days": 1,
+      "note": "shared by 8"
+    },
+    {
+      "user": "shared-loans-2",
+      "mfa": "NO",
+      "keys": 1,
+      "oldest_key_days": 385,
+      "last_used_days": 2,
+      "note": "shared by 4"
+    },
+    {
+      "user": "juma",
+      "mfa": "yes",
+      "keys": 1,
+      "oldest_key_days": 120,
+      "last_used_days": 3,
+      "note": ""
+    },
+    {
+      "user": "amina",
+      "mfa": "yes",
+      "keys": 1,
+      "oldest_key_days": 45,
+      "last_used_days": 0,
+      "note": ""
+    }
+  ],
+  "least_privilege": [
+    {
+      "role": "loan-app-function",
+      "current": [
+        {
+          "Sid": "AllBuckets",
+          "Effect": "Allow",
+          "Action": "s3:*",
+          "Resource": "*"
+        }
+      ],
+      "proposed": {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Sid": "OnlyWhatTheFunctionUses",
+            "Effect": "Allow",
+            "Action": [
+              "s3:PutObject"
+            ],
+            "Resource": [
+              "arn:aws:s3:::loan-docs/*"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

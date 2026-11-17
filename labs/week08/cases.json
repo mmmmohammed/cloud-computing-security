@@ -1,0 +1,250 @@
+{
+  "note": "Each case is one request against a set of policies. The expectation is the decision AWS's documented evaluation order produces: explicit deny, then SCP and boundary guardrails, then allow, then implicit deny.",
+  "cases": [
+    {
+      "name": "Developer reads the finance bucket",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/2026/q3.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "ReadReportsBucketOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"] }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Developer reads a bucket the policy does not name",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::hr-payroll/salaries.xlsx" },
+      "policies": {
+        "identity": [
+          { "Sid": "ReadReportsBucketOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"] }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "The bucket listing is a separate resource",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:ListBucket", "resource": "arn:aws:s3:::finance-reports" },
+      "policies": {
+        "identity": [
+          { "Sid": "ReadReportsBucketOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"] }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Auditor reads CloudTrail",
+      "request": { "principal": "arn:aws:iam::111122223333:user/juma", "action": "cloudtrail:LookupEvents", "resource": "*" },
+      "policies": {
+        "identity": [
+          { "Sid": "AuditTrailReadOnly", "Effect": "Allow", "Action": ["cloudtrail:LookupEvents", "cloudtrail:GetTrailStatus"], "Resource": "*" }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Auditor tries to change the trail",
+      "request": { "principal": "arn:aws:iam::111122223333:user/juma", "action": "cloudtrail:StopLogging", "resource": "*" },
+      "policies": {
+        "identity": [
+          { "Sid": "AuditTrailReadOnly", "Effect": "Allow", "Action": ["cloudtrail:LookupEvents", "cloudtrail:GetTrailStatus"], "Resource": "*" }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "Explicit deny overrides an allow in the same policy set",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:DeleteObject", "resource": "arn:aws:s3:::finance-reports/2026/q3.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "AllOnTheBucket", "Effect": "Allow", "Action": "s3:*", "Resource": "arn:aws:s3:::finance-reports/*" },
+          { "Sid": "NeverDeleteReports", "Effect": "Deny", "Action": ["s3:DeleteObject", "s3:DeleteObjectVersion"], "Resource": "arn:aws:s3:::finance-reports/*" }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "The same user can still write, because only delete is denied",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:PutObject", "resource": "arn:aws:s3:::finance-reports/2026/q4.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "AllOnTheBucket", "Effect": "Allow", "Action": "s3:*", "Resource": "arn:aws:s3:::finance-reports/*" },
+          { "Sid": "NeverDeleteReports", "Effect": "Deny", "Action": ["s3:DeleteObject", "s3:DeleteObjectVersion"], "Resource": "arn:aws:s3:::finance-reports/*" }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "SCP pins launches to one region — requested region",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "ec2:RunInstances", "resource": "*", "context": { "aws:RequestedRegion": "af-south-1" } },
+      "policies": {
+        "identity": [{ "Sid": "LaunchInstances", "Effect": "Allow", "Action": "ec2:RunInstances", "Resource": "*" }],
+        "scp": [
+          { "Sid": "ComputeOnly", "Effect": "Allow", "Action": ["ec2:*", "s3:*"], "Resource": "*" },
+          { "Sid": "RegionGuardrail", "Effect": "Deny", "Action": "*", "Resource": "*", "Condition": { "StringNotEquals": { "aws:RequestedRegion": "af-south-1" } } }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "SCP pins launches to one region — other region",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "ec2:RunInstances", "resource": "*", "context": { "aws:RequestedRegion": "eu-west-1" } },
+      "policies": {
+        "identity": [{ "Sid": "LaunchInstances", "Effect": "Allow", "Action": "ec2:RunInstances", "Resource": "*" }],
+        "scp": [
+          { "Sid": "ComputeOnly", "Effect": "Allow", "Action": ["ec2:*", "s3:*"], "Resource": "*" },
+          { "Sid": "RegionGuardrail", "Effect": "Deny", "Action": "*", "Resource": "*", "Condition": { "StringNotEquals": { "aws:RequestedRegion": "af-south-1" } } }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "Identity allows, but the SCP does not cover the service",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "ec2:RunInstances", "resource": "*" },
+      "policies": {
+        "identity": [{ "Sid": "LaunchInstances", "Effect": "Allow", "Action": "ec2:RunInstances", "Resource": "*" }],
+        "scp": [{ "Sid": "StorageOnly", "Effect": "Allow", "Action": "s3:*", "Resource": "*" }]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "Permissions boundary is narrower than the policy",
+      "request": { "principal": "arn:aws:iam::111122223333:role/report-writer", "action": "s3:DeleteObject", "resource": "arn:aws:s3:::finance-reports/old.pdf" },
+      "policies": {
+        "identity": [{ "Sid": "ReportsFull", "Effect": "Allow", "Action": "s3:*", "Resource": "arn:aws:s3:::finance-reports/*" }],
+        "boundary": [{ "Sid": "ReadWriteNoDelete", "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": "arn:aws:s3:::finance-reports/*" }]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "The same boundary permits the write it names",
+      "request": { "principal": "arn:aws:iam::111122223333:role/report-writer", "action": "s3:PutObject", "resource": "arn:aws:s3:::finance-reports/new.pdf" },
+      "policies": {
+        "identity": [{ "Sid": "ReportsFull", "Effect": "Allow", "Action": "s3:*", "Resource": "arn:aws:s3:::finance-reports/*" }],
+        "boundary": [{ "Sid": "ReadWriteNoDelete", "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": "arn:aws:s3:::finance-reports/*" }]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "MFA condition — no MFA in the request",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "ReadReportsBucketOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"], "Condition": { "Bool": { "aws:MultiFactorAuthPresent": "true" } } }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "MFA condition — MFA present",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf", "context": { "aws:MultiFactorAuthPresent": "true" } },
+      "policies": {
+        "identity": [
+          { "Sid": "ReadReportsBucketOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"], "Condition": { "Bool": { "aws:MultiFactorAuthPresent": "true" } } }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Office IP range — request from the office",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf", "context": { "aws:SourceIp": "197.248.10.25" } },
+      "policies": {
+        "identity": [
+          { "Sid": "OfficeOnly", "Effect": "Allow", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::finance-reports/*", "Condition": { "IpAddress": { "aws:SourceIp": "197.248.0.0/16" } } }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Office IP range — request from home",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf", "context": { "aws:SourceIp": "41.90.14.7" } },
+      "policies": {
+        "identity": [
+          { "Sid": "OfficeOnly", "Effect": "Allow", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::finance-reports/*", "Condition": { "IpAddress": { "aws:SourceIp": "197.248.0.0/16" } } }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "ABAC — principal tag equals resource tag",
+      "request": { "principal": "arn:aws:iam::111122223333:user/daniel", "action": "ec2:StartInstances", "resource": "arn:aws:ec2:af-south-1:111122223333:instance/i-0abc", "context": { "aws:PrincipalTag/Project": "afya", "aws:ResourceTag/Project": "afya" } },
+      "policies": {
+        "identity": [
+          { "Sid": "StartOwnProjectInstances", "Effect": "Allow", "Action": ["ec2:StartInstances", "ec2:StopInstances"], "Resource": "arn:aws:ec2:af-south-1:111122223333:instance/*", "Condition": { "StringEquals": { "aws:PrincipalTag/Project": "${aws:ResourceTag/Project}" } } }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "ABAC — principal tag differs from the resource tag",
+      "request": { "principal": "arn:aws:iam::111122223333:user/daniel", "action": "ec2:StartInstances", "resource": "arn:aws:ec2:af-south-1:111122223333:instance/i-0xyz", "context": { "aws:PrincipalTag/Project": "afya", "aws:ResourceTag/Project": "biashara" } },
+      "policies": {
+        "identity": [
+          { "Sid": "StartOwnProjectInstances", "Effect": "Allow", "Action": ["ec2:StartInstances", "ec2:StopInstances"], "Resource": "arn:aws:ec2:af-south-1:111122223333:instance/*", "Condition": { "StringEquals": { "aws:PrincipalTag/Project": "${aws:ResourceTag/Project}" } } }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "Resource policy grants a partner account",
+      "request": { "principal": "arn:aws:iam::444455556666:role/partner-reader", "action": "s3:GetObject", "resource": "arn:aws:s3:::shared-invoices/inv-001.pdf" },
+      "policies": {
+        "identity": [],
+        "resource": [
+          { "Sid": "PartnerRead", "Effect": "Allow", "Principal": { "AWS": "arn:aws:iam::444455556666:role/partner-reader" }, "Action": "s3:GetObject", "Resource": "arn:aws:s3:::shared-invoices/*" }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Resource policy does not name this principal",
+      "request": { "principal": "arn:aws:iam::999988887777:role/stranger", "action": "s3:GetObject", "resource": "arn:aws:s3:::shared-invoices/inv-001.pdf" },
+      "policies": {
+        "identity": [],
+        "resource": [
+          { "Sid": "PartnerRead", "Effect": "Allow", "Principal": { "AWS": "arn:aws:iam::444455556666:role/partner-reader" }, "Action": "s3:GetObject", "Resource": "arn:aws:s3:::shared-invoices/*" }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "NotAction — everything except delete",
+      "request": { "principal": "arn:aws:iam::111122223333:user/juma", "action": "s3:GetObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "EverythingButDelete", "Effect": "Allow", "NotAction": ["s3:DeleteObject", "s3:DeleteBucket"], "Resource": "*" }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "NotAction — the excluded action is still denied",
+      "request": { "principal": "arn:aws:iam::111122223333:user/juma", "action": "s3:DeleteObject", "resource": "arn:aws:s3:::finance-reports/q3.pdf" },
+      "policies": {
+        "identity": [
+          { "Sid": "EverythingButDelete", "Effect": "Allow", "NotAction": ["s3:DeleteObject", "s3:DeleteBucket"], "Resource": "*" }
+        ]
+      },
+      "expect": "DENY"
+    },
+    {
+      "name": "Policy variable — home directory",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:PutObject", "resource": "arn:aws:s3:::staff-files/amina/notes.txt", "context": { "aws:username": "amina" } },
+      "policies": {
+        "identity": [
+          { "Sid": "OwnHomeOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": "arn:aws:s3:::staff-files/${aws:username}/*" }
+        ]
+      },
+      "expect": "ALLOW"
+    },
+    {
+      "name": "Policy variable — someone else's home directory",
+      "request": { "principal": "arn:aws:iam::111122223333:user/amina", "action": "s3:GetObject", "resource": "arn:aws:s3:::staff-files/juma/notes.txt", "context": { "aws:username": "amina" } },
+      "policies": {
+        "identity": [
+          { "Sid": "OwnHomeOnly", "Effect": "Allow", "Action": ["s3:GetObject", "s3:PutObject"], "Resource": "arn:aws:s3:::staff-files/${aws:username}/*" }
+        ]
+      },
+      "expect": "DENY"
+    }
+  ]
+}

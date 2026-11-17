@@ -1,0 +1,62 @@
+credential report · Tumaini Microfinance (case study from the deck)
+  user              mfa  keys  oldest key  last used  note
+  root              NO   1     2140        14d        ROOT
+  brian.former      NO   1     700         14d        departed
+  shared-loans-1    NO   1     410         1d         shared by 8
+  shared-loans-2    NO   1     385         2d         shared by 4
+  juma              yes  1     120         3d         
+  amina             yes  1     45          0d         
+
+14 findings
+  [CRITICAL] Departed employee brian.former still has an active key
+             the account remains usable by whoever holds the key
+             fix: Disable the user and its keys now, then review CloudTrail for its use
+  [CRITICAL] Root user has no MFA
+             root account can sign in with a password alone
+             fix: Enable MFA on root, then store the credentials offline
+  [CRITICAL] Root user has an active access key
+             key AKIA-ROOT-0001 created 2140 days ago, last used 14 days ago
+             fix: Delete the root access key; nothing should call AWS as root
+  [HIGH    ] group Developers can escalate its own privileges
+             9 path(s): iam:PassRole + lambda:CreateFunction; iam:PassRole + ec2:RunInstances; iam:CreatePolicyVersion + * and 6 more. For example, create a function that runs as a more privileged role.
+             fix: Remove one side of each pair, or add a permissions boundary and an SCP
+  [HIGH    ] shared-loans-1 has no MFA
+             console or API access without a second factor
+             fix: Enforce MFA, then require it in policy with aws:MultiFactorAuthPresent
+  [HIGH    ] shared-loans-1 is shared by 8 people
+             CloudTrail records the user, never the human
+             fix: Issue one identity per person, or federate to remove IAM users entirely
+  [HIGH    ] shared-loans-2 has no MFA
+             console or API access without a second factor
+             fix: Enforce MFA, then require it in policy with aws:MultiFactorAuthPresent
+  [HIGH    ] shared-loans-2 is shared by 4 people
+             CloudTrail records the user, never the human
+             fix: Issue one identity per person, or federate to remove IAM users entirely
+  [HIGH    ] Group Developers carries AdministratorAccess
+             members: shared-loans-1, shared-loans-2, amina, brian.former — full control of the account
+             fix: Replace with a scoped policy; keep admin in a break-glass role with MFA and alerting
+  [HIGH    ] Role loan-app-function has a wildcard allow
+             Action '*' or a service wildcard with Resource '*'
+             fix: Scope the action and the resource ARN to what the workload uses
+  [MEDIUM  ] shared-loans-1's key is 410 days old
+             key AKIA-SHARED-01 is past a 90-day rotation window
+             fix: Rotate the key; better, remove it and use a role
+  [MEDIUM  ] shared-loans-2's key is 385 days old
+             key AKIA-SHARED-02 is past a 90-day rotation window
+             fix: Rotate the key; better, remove it and use a role
+  [MEDIUM  ] juma's key is 120 days old
+             key AKIA-JUMA-01 is past a 90-day rotation window
+             fix: Rotate the key; better, remove it and use a role
+  [MEDIUM  ] Role loan-app-function exceeds what it uses
+             it needs s3:PutObject on arn:aws:s3:::loan-docs/*
+             fix: Replace with the minimal statement below
+
+least privilege · loan-app-function
+  before: s3:* on *
+  after : ['s3:PutObject'] on ['arn:aws:s3:::loan-docs/*']
+
+summary: 3 critical · 7 high · 4 medium · 0 low
+
+after remediation
+  14 findings before, 0 after
+wrote findings.json

@@ -16,9 +16,10 @@ something runnable and explained rather than a set of slides.
 | 05 | [Private Cloud with Eucalyptus](module-05/index.html) | The five controllers of an AWS-compatible private cloud, what each one takes with it when it fails, and an EC2 Query-compatible control plane built locally that verifies signatures server-side |
 | 06 | [Commissioning and Troubleshooting](module-06/index.html) | The secure build path enforced by a policy gate, the hardening checklist, and five real faults injected into a real server then diagnosed with evidence |
 | 07 | [Issues, Challenges and Lock-in](module-07/index.html) | The shared responsibility model computed over a real architecture, 12 STRIDE threats each with an owner, four kinds of lock-in scored, and a rehearsed exit |
+| 08 | [Identity and Access Management](module-08/index.html) | The documented policy evaluation order implemented as a working engine (24/24 cases), and an access review that takes the Tumaini audit from 14 findings to zero |
 
 Each module folder has its own README with the lab instructions, the measured output, an answer key and
-an honest list of what was not run: **[01](module-01/README.md)** · **[02](module-02/README.md)** · **[03](module-03/README.md)** · **[04](module-04/README.md)** · **[05](module-05/README.md)** · **[06](module-06/README.md)** · **[07](module-07/README.md)**
+an honest list of what was not run: **[01](module-01/README.md)** · **[02](module-02/README.md)** · **[03](module-03/README.md)** · **[04](module-04/README.md)** · **[05](module-05/README.md)** · **[06](module-06/README.md)** · **[07](module-07/README.md)** · **[08](module-08/README.md)**
 
 ## Module 01 — what this covers
 
@@ -84,6 +85,7 @@ module-04/index.html       module 04 — vendors, web services and APIs
 module-05/index.html       module 05 — private cloud with Eucalyptus
 module-06/index.html       module 06 — commissioning and troubleshooting (with img/)
 module-07/index.html       module 07 — issues, challenges and lock-in
+module-08/index.html       module 08 — identity and access management
 assets/css/styles.css      one design system, shared by every page
 assets/js/main.js          contents rail, quiz, timing panel, sortable tables
 labs/week01/               socket lab scripts, captured logs, latency JSON
@@ -93,6 +95,7 @@ labs/week04/               SigV4 from the spec, AWS test-vector check, API refus
 labs/week05/               EC2 Query-compatible control plane, signed client, captured run
 labs/week06/               spec, policy gate, bootstrap, provisioning and fault suite
 labs/week07/               responsibility/STRIDE engine, generated diagram, exit rehearsal
+labs/week08/               IAM policy evaluator, case file, access review, audit model
 ```
 
 ## Run it locally
