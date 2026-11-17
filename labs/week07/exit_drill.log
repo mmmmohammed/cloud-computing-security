@@ -1,0 +1,17 @@
+source   proprietary_store.json · AcmeNoSQL/2.1 · table 'accounts'
+         4000 documents, provider-specific shape (pk/sk/cols)
+
+integrity  sha256 2cdc7866d94961de5febd0f87b931646…
+           every field of every record, canonical order
+
+  csv      4000 records  match
+  json     4000 records  match
+  sqlite   4000 records  match
+
+transfer
+  exported     1,212.2 KiB in 61 ms
+  egress cost  $0.000104 at $0.09/GB (pre-2024 rates)
+  with waiver  $0.00 — the 2024 exit-fee commitments cover this case
+  over 100 Mbps  0.10 s of link time for this volume
+
+exit rehearsal passed — 4000 of 4000 records recovered in three open formats

@@ -1420,6 +1420,26 @@ details[open] > summary .sum-hint::after { content: "hide"; }
   color: var(--ink-2);
 }
 
+/* responsibility verdicts (module 07) */
+.v {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.v--c { color: #1f6f4a; }
+.v--s { color: #b45309; }
+.v--p { color: #334e7d; }
+@media (prefers-color-scheme: dark) {
+  .v--c { color: #6fcf9b; }
+  .v--s { color: #f0b46a; }
+  .v--p { color: #8fb0e8; }
+}
+.tbl--matrix td:nth-child(n + 2) { text-align: left; }
+
 /* screenshots (module 06) */
 .shot {
   margin: var(--s5) 0;

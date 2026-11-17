@@ -1,0 +1,63 @@
+architecture: Biashara Bank mobile banking API
+  6 components, 6 data flows
+
+shared responsibility model
+  Data classification & accountability   customer · customer · customer
+  Identity & access management           customer · customer · shared  
+  Application security                   customer · customer · provider
+  Network controls (firewall rules)      customer · shared   · provider
+  Operating system patching              customer · provider · provider
+  Hypervisor & host infrastructure       provider · provider · provider
+  Physical data centre security          provider · provider · provider
+
+component split
+  Mobile app (user)          external customer 0 · shared 0 · provider 0  -> external actor
+  API server                 iaas  customer 5 · shared 0 · provider 2  -> customer
+  Accounts database          paas  customer 3 · shared 1 · provider 3  -> customer + provider
+  Statement files            paas  customer 3 · shared 1 · provider 3  -> customer + provider
+  Customer email             saas  customer 1 · shared 1 · provider 5  -> provider
+  Statement generator        paas  customer 3 · shared 1 · provider 3  -> customer + provider
+
+flow F1 login: 1 threats
+  Spoofing                 CSA #1  owner: customer (the bank's team)
+flow F2 balance: 1 threats
+  Elevation of privilege   CSA #1  owner: customer (the bank's team)
+flow F3 query: 4 threats
+  Repudiation              CSA #3  owner: customer (the bank's team)
+  Denial of service        CSA #2  owner: shared — provider supplies it, customer must configure it
+  Elevation of privilege   CSA #1  owner: customer (the bank's team)
+  Information disclosure   CSA #8  owner: customer (the bank's team)
+flow F4 statements: 3 threats
+  Denial of service        CSA #2  owner: shared — provider supplies it, customer must configure it
+  Information disclosure   CSA #11  owner: customer (the bank's team)
+  Information disclosure   CSA #8  owner: customer (the bank's team)
+flow F5 notify: 2 threats
+  Denial of service        CSA #2  owner: provider
+  Spoofing                 CSA #6  owner: customer (the bank's team)
+flow F6 admin: 1 threats
+  Spoofing                 CSA #1  owner: customer (the bank's team)
+
+who owns the work
+   9 threats  customer (the bank's team)
+   2 threats  shared — provider supplies it, customer must configure it
+   1 threat   provider
+
+lock-in
+  Mobile app (user)          0/12 (n/a)
+  API server                 0/12 (low)
+  Accounts database          12/12 (high)
+      data      export to an open format (CSV, JSON, SQLite) and prove a restore
+      api       keep the call graph in Terraform and put a container or adapter in front
+      contract  exit clause naming data-return format, timeline, assistance and a price cap
+      skills    cross-train on a second provider; keep runbooks vendor-neutral
+  Statement files            3/12 (low)
+      api       keep the call graph in Terraform and put a container or adapter in front
+  Customer email             0/12 (low)
+  Statement generator        12/12 (high)
+      data      export to an open format (CSV, JSON, SQLite) and prove a restore
+      api       keep the call graph in Terraform and put a container or adapter in front
+      contract  exit clause naming data-return format, timeline, assistance and a price cap
+      skills    cross-train on a second provider; keep runbooks vendor-neutral
+
+12 threats mapped across 6 CSA categories
+wrote report.json and diagram.svg

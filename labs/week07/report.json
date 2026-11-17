@@ -1,0 +1,347 @@
+{
+  "architecture": "Biashara Bank mobile banking API",
+  "responsibility": [
+    {
+      "row": "Data classification & accountability",
+      "iaas": "customer",
+      "paas": "customer",
+      "saas": "customer"
+    },
+    {
+      "row": "Identity & access management",
+      "iaas": "customer",
+      "paas": "customer",
+      "saas": "shared"
+    },
+    {
+      "row": "Application security",
+      "iaas": "customer",
+      "paas": "customer",
+      "saas": "provider"
+    },
+    {
+      "row": "Network controls (firewall rules)",
+      "iaas": "customer",
+      "paas": "shared",
+      "saas": "provider"
+    },
+    {
+      "row": "Operating system patching",
+      "iaas": "customer",
+      "paas": "provider",
+      "saas": "provider"
+    },
+    {
+      "row": "Hypervisor & host infrastructure",
+      "iaas": "provider",
+      "paas": "provider",
+      "saas": "provider"
+    },
+    {
+      "row": "Physical data centre security",
+      "iaas": "provider",
+      "paas": "provider",
+      "saas": "provider"
+    }
+  ],
+  "components": {
+    "client": {
+      "name": "Mobile app (user)",
+      "model": "external",
+      "counts": {
+        "customer": 0,
+        "shared": 0,
+        "provider": 0
+      },
+      "dominant": "external actor",
+      "split": false,
+      "external": true,
+      "lockin": {
+        "scores": {
+          "data": 0,
+          "api": 0,
+          "contract": 0,
+          "skills": 0
+        },
+        "total": 0,
+        "max": 12,
+        "verdict": "n/a",
+        "exit_steps": {}
+      }
+    },
+    "api": {
+      "name": "API server",
+      "model": "iaas",
+      "counts": {
+        "customer": 5,
+        "shared": 0,
+        "provider": 2
+      },
+      "dominant": "customer",
+      "split": false,
+      "lockin": {
+        "scores": {
+          "data": 0,
+          "api": 0,
+          "contract": 0,
+          "skills": 0
+        },
+        "total": 0,
+        "max": 12,
+        "verdict": "low",
+        "exit_steps": {}
+      }
+    },
+    "db": {
+      "name": "Accounts database",
+      "model": "paas",
+      "counts": {
+        "customer": 3,
+        "shared": 1,
+        "provider": 3
+      },
+      "dominant": "customer + provider",
+      "split": true,
+      "lockin": {
+        "scores": {
+          "data": 3,
+          "api": 3,
+          "contract": 3,
+          "skills": 3
+        },
+        "total": 12,
+        "max": 12,
+        "verdict": "high",
+        "exit_steps": {
+          "data": "export to an open format (CSV, JSON, SQLite) and prove a restore",
+          "api": "keep the call graph in Terraform and put a container or adapter in front",
+          "contract": "exit clause naming data-return format, timeline, assistance and a price cap",
+          "skills": "cross-train on a second provider; keep runbooks vendor-neutral"
+        }
+      }
+    },
+    "files": {
+      "name": "Statement files",
+      "model": "paas",
+      "counts": {
+        "customer": 3,
+        "shared": 1,
+        "provider": 3
+      },
+      "dominant": "customer + provider",
+      "split": true,
+      "lockin": {
+        "scores": {
+          "data": 0,
+          "api": 3,
+          "contract": 0,
+          "skills": 0
+        },
+        "total": 3,
+        "max": 12,
+        "verdict": "low",
+        "exit_steps": {
+          "api": "keep the call graph in Terraform and put a container or adapter in front"
+        }
+      }
+    },
+    "mail": {
+      "name": "Customer email",
+      "model": "saas",
+      "counts": {
+        "customer": 1,
+        "shared": 1,
+        "provider": 5
+      },
+      "dominant": "provider",
+      "split": false,
+      "lockin": {
+        "scores": {
+          "data": 0,
+          "api": 0,
+          "contract": 0,
+          "skills": 0
+        },
+        "total": 0,
+        "max": 12,
+        "verdict": "low",
+        "exit_steps": {}
+      }
+    },
+    "fn": {
+      "name": "Statement generator",
+      "model": "paas",
+      "counts": {
+        "customer": 3,
+        "shared": 1,
+        "provider": 3
+      },
+      "dominant": "customer + provider",
+      "split": true,
+      "lockin": {
+        "scores": {
+          "data": 3,
+          "api": 3,
+          "contract": 3,
+          "skills": 3
+        },
+        "total": 12,
+        "max": 12,
+        "verdict": "high",
+        "exit_steps": {
+          "data": "export to an open format (CSV, JSON, SQLite) and prove a restore",
+          "api": "keep the call graph in Terraform and put a container or adapter in front",
+          "contract": "exit clause naming data-return format, timeline, assistance and a price cap",
+          "skills": "cross-train on a second provider; keep runbooks vendor-neutral"
+        }
+      }
+    }
+  },
+  "threats": [
+    {
+      "flow": "F1 login",
+      "stride": "Spoofing",
+      "threat": "A human session on F1 login needs only a password",
+      "csa_id": 1,
+      "csa": "Insufficient identity, credential, access and key management",
+      "responsibility_row": "Identity & access management",
+      "owner": "customer (the bank's team)",
+      "control": "Enforce MFA for every human identity, phishing-resistant where possible",
+      "note": null
+    },
+    {
+      "flow": "F2 balance",
+      "stride": "Elevation of privilege",
+      "threat": "Whatever F2 balance carries can be reached by changing an identifier",
+      "csa_id": 1,
+      "csa": "Insufficient identity, credential, access and key management",
+      "responsibility_row": "Identity & access management",
+      "owner": "customer (the bank's team)",
+      "control": "Authorise each request against the object, not just the route (block IDOR)",
+      "note": null
+    },
+    {
+      "flow": "F3 query",
+      "stride": "Repudiation",
+      "threat": "Actions on F3 query leave no attributable record",
+      "csa_id": 3,
+      "csa": "Misconfiguration and inadequate change control",
+      "responsibility_row": "Application security",
+      "owner": "customer (the bank's team)",
+      "control": "Structured audit logs with actor, action, object and time, to a write-once store",
+      "note": null
+    },
+    {
+      "flow": "F3 query",
+      "stride": "Denial of service",
+      "threat": "Nothing limits how hard F3 query can be called",
+      "csa_id": 2,
+      "csa": "Insecure interfaces and APIs",
+      "responsibility_row": "Network controls (firewall rules)",
+      "owner": "shared \u2014 provider supplies it, customer must configure it",
+      "control": "Rate limits, quotas and WAF rules at the edge; alert on volume anomalies",
+      "note": "No DoS entry exists in the 2022 list; the closest match is insecure interfaces and APIs."
+    },
+    {
+      "flow": "F3 query",
+      "stride": "Elevation of privilege",
+      "threat": "Whatever F3 query carries can be reached by changing an identifier",
+      "csa_id": 1,
+      "csa": "Insufficient identity, credential, access and key management",
+      "responsibility_row": "Identity & access management",
+      "owner": "customer (the bank's team)",
+      "control": "Authorise each request against the object, not just the route (block IDOR)",
+      "note": null
+    },
+    {
+      "flow": "F3 query",
+      "stride": "Information disclosure",
+      "threat": "Accounts database holds personal data with no field-level protection",
+      "csa_id": 8,
+      "csa": "Accidental cloud data disclosure",
+      "responsibility_row": "Data classification & accountability",
+      "owner": "customer (the bank's team)",
+      "control": "Classify the data, encrypt it, and mask it outside the paths that need it",
+      "note": null
+    },
+    {
+      "flow": "F4 statements",
+      "stride": "Denial of service",
+      "threat": "Nothing limits how hard F4 statements can be called",
+      "csa_id": 2,
+      "csa": "Insecure interfaces and APIs",
+      "responsibility_row": "Network controls (firewall rules)",
+      "owner": "shared \u2014 provider supplies it, customer must configure it",
+      "control": "Rate limits, quotas and WAF rules at the edge; alert on volume anomalies",
+      "note": "No DoS entry exists in the 2022 list; the closest match is insecure interfaces and APIs."
+    },
+    {
+      "flow": "F4 statements",
+      "stride": "Information disclosure",
+      "threat": "Statement files is readable without an authenticated identity",
+      "csa_id": 11,
+      "csa": "Cloud storage data exfiltration",
+      "responsibility_row": "Data classification & accountability",
+      "owner": "customer (the bank's team)",
+      "control": "Block public access at the account level; serve files through signed URLs",
+      "note": null
+    },
+    {
+      "flow": "F4 statements",
+      "stride": "Information disclosure",
+      "threat": "Statement files holds personal data with no field-level protection",
+      "csa_id": 8,
+      "csa": "Accidental cloud data disclosure",
+      "responsibility_row": "Data classification & accountability",
+      "owner": "customer (the bank's team)",
+      "control": "Classify the data, encrypt it, and mask it outside the paths that need it",
+      "note": null
+    },
+    {
+      "flow": "F5 notify",
+      "stride": "Denial of service",
+      "threat": "Nothing limits how hard F5 notify can be called",
+      "csa_id": 2,
+      "csa": "Insecure interfaces and APIs",
+      "responsibility_row": "Network controls (firewall rules)",
+      "owner": "provider",
+      "control": "Rate limits, quotas and WAF rules at the edge; alert on volume anomalies",
+      "note": "No DoS entry exists in the 2022 list; the closest match is insecure interfaces and APIs."
+    },
+    {
+      "flow": "F5 notify",
+      "stride": "Spoofing",
+      "threat": "Mail from F5 notify can claim any sender domain",
+      "csa_id": 6,
+      "csa": "Unsecure third-party resources",
+      "responsibility_row": "Application security",
+      "owner": "customer (the bank's team)",
+      "control": "Publish SPF, DKIM and DMARC, and monitor the reports",
+      "note": "SPF, DKIM and DMARC are DNS records, so this stays the customer's even in SaaS \u2014 an edge the three-column model does not draw."
+    },
+    {
+      "flow": "F6 admin",
+      "stride": "Spoofing",
+      "threat": "A human session on F6 admin needs only a password",
+      "csa_id": 1,
+      "csa": "Insufficient identity, credential, access and key management",
+      "responsibility_row": "Identity & access management",
+      "owner": "customer (the bank's team)",
+      "control": "Enforce MFA for every human identity, phishing-resistant where possible",
+      "note": null
+    }
+  ],
+  "owner_counts": {
+    "customer (the bank's team)": 9,
+    "shared \u2014 provider supplies it, customer must configure it": 2,
+    "provider": 1
+  },
+  "csa_coverage": [
+    1,
+    2,
+    3,
+    6,
+    8,
+    11
+  ]
+}

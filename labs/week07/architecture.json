@@ -1,0 +1,149 @@
+{
+  "name": "Biashara Bank mobile banking API",
+  "components": {
+    "client": {
+      "name": "Mobile app (user)",
+      "model": "external",
+      "provider": "customer's own device",
+      "data_classes": [],
+      "lockin": { "data_format": "open", "api": "open", "contract_months": 0, "skills": "portable" }
+    },
+    "api": {
+      "name": "API server",
+      "model": "iaas",
+      "provider": "EC2",
+      "data_classes": ["pii"],
+      "field_level_controls": true,
+      "public_access": false,
+      "patch_days": 6,
+      "lockin": { "data_format": "open", "api": "open", "contract_months": 12, "skills": "portable" }
+    },
+    "db": {
+      "name": "Accounts database",
+      "model": "paas",
+      "provider": "proprietary NoSQL",
+      "data_classes": ["pii", "financial"],
+      "field_level_controls": false,
+      "public_access": false,
+      "patch_days": 0,
+      "lockin": { "data_format": "proprietary", "api": "proprietary", "contract_months": 60, "skills": "vendor-only" }
+    },
+    "files": {
+      "name": "Statement files",
+      "model": "paas",
+      "provider": "object storage",
+      "data_classes": ["pii", "financial"],
+      "field_level_controls": false,
+      "public_access": true,
+      "patch_days": 0,
+      "lockin": { "data_format": "open", "api": "proprietary", "contract_months": 12, "skills": "portable" }
+    },
+    "mail": {
+      "name": "Customer email",
+      "model": "saas",
+      "provider": "Microsoft 365",
+      "data_classes": ["pii"],
+      "field_level_controls": true,
+      "public_access": false,
+      "patch_days": 0,
+      "lockin": { "data_format": "open", "api": "open", "contract_months": 0, "skills": "portable" }
+    },
+    "fn": {
+      "name": "Statement generator",
+      "model": "paas",
+      "provider": "proprietary serverless",
+      "data_classes": ["pii"],
+      "field_level_controls": true,
+      "public_access": false,
+      "patch_days": 0,
+      "lockin": { "data_format": "proprietary", "api": "proprietary", "contract_months": 60, "skills": "vendor-only" }
+    }
+  },
+  "flows": [
+    {
+      "id": "F1 login",
+      "from": { "component": "client" },
+      "to": { "component": "api" },
+      "data": "credentials, OTP",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": false,
+      "actor": "human",
+      "logged": true,
+      "rate_limited": true,
+      "validated_input": true,
+      "authorised_per_request": true
+    },
+    {
+      "id": "F2 balance",
+      "from": { "component": "client" },
+      "to": { "component": "api" },
+      "data": "account id, balance",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": true,
+      "actor": "human",
+      "logged": true,
+      "rate_limited": true,
+      "validated_input": true,
+      "authorised_per_request": false
+    },
+    {
+      "id": "F3 query",
+      "from": { "component": "api" },
+      "to": { "component": "db" },
+      "data": "account rows",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": false,
+      "actor": "service",
+      "logged": false,
+      "rate_limited": false,
+      "validated_input": true,
+      "authorised_per_request": false
+    },
+    {
+      "id": "F4 statements",
+      "from": { "component": "api" },
+      "to": { "component": "files" },
+      "data": "PDF statements",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": false,
+      "actor": "service",
+      "logged": true,
+      "rate_limited": false,
+      "validated_input": true,
+      "authorised_per_request": true
+    },
+    {
+      "id": "F5 notify",
+      "from": { "component": "fn" },
+      "to": { "component": "mail" },
+      "data": "email with balance summary",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": false,
+      "actor": "service",
+      "logged": true,
+      "rate_limited": false,
+      "validated_input": true,
+      "authorised_per_request": true,
+      "sender_authenticated": false
+    },
+    {
+      "id": "F6 admin",
+      "from": { "component": "api" },
+      "to": { "component": "api" },
+      "data": "admin console session",
+      "encrypted": true,
+      "authenticated": true,
+      "mfa": false,
+      "actor": "human",
+      "logged": true,
+      "rate_limited": true,
+      "validated_input": true,
+      "authorised_per_request": true
+    }
+  ]
+}

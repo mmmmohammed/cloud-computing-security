@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 07 — Cloud issues, challenges and provider lock-in · Cloud computing security</title>
+<meta name="description" content="The shared responsibility model applied to a real architecture, the CSA top cloud threats, multi-tenancy risks, four forms of lock-in with exit steps, a rehearsed exit, and the core security principles." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 07</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 07 — issues, lock-in and principles</p>
+      <h1 id="page-title">Most cloud failures are not hacks. They are misunderstandings about who does what.</h1>
+      <p class="lede">
+        “We are ISO 27001 certified, so security is handled” is a sales sentence, not a control. The provider
+        secures the cloud; you secure what you put in it — and the split moves as you move up the stack. This
+        module makes that split computable, applies STRIDE to six data flows, and rehearses an exit from a
+        proprietary store instead of assuming one is possible.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#model">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>what the tool found</span><span>week 07</span></div>
+        <dl class="factlist">
+          <div><dt>9 / 2 / 1</dt><dd>threats owned by the customer, shared, and the provider — from 12 mapped.</dd></div>
+          <div><dt>12 / 12</dt><dd>lock-in score for the proprietary database and serverless function.</dd></div>
+          <div><dt>4,000</dt><dd>records recovered intact in three open formats in an exit rehearsal.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>07 — issues, challenges and lock-in</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Intermediate, seven of fifteen</dd>
+      </div>
+      <div>
+        <dt>builds on</dt>
+        <dd>06 hardening · 05 control planes</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>12 threats mapped, exit rehearsal, generated diagram</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week07</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#challenges" data-spy><span>01</span>Six challenges, one word each</a></li>
+        <li><a href="#model" data-spy><span>02</span>The shared responsibility model</a></li>
+        <li><a href="#threats" data-spy><span>03</span>The CSA top eleven</a></li>
+        <li><a href="#tenancy" data-spy><span>04</span>Sharing hardware with strangers</a></li>
+        <li><a href="#lockin" data-spy><span>05</span>Four kinds of lock-in</a></li>
+        <li><a href="#fees" data-spy><span>06</span>The 2024 exit-fee waivers</a></li>
+        <li><a href="#principles" data-spy><span>07</span>Six principles that travel</a></li>
+        <li><a href="#lab" data-spy><span>08</span>Lab: the model, computed</a></li>
+        <li><a href="#stride" data-spy><span>09</span>Lab: twelve threats, owners named</a></li>
+        <li><a href="#exit" data-spy><span>10</span>Lab: rehearse the exit</a></li>
+        <li><a href="#case" data-spy><span>11</span>Biashara Bank</a></li>
+        <li><a href="#quiz" data-spy><span>12</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>13</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 13 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#challenges"><span>01</span>Six challenges, one word each</a></li>
+          <li><a href="#model"><span>02</span>The shared responsibility model</a></li>
+          <li><a href="#threats"><span>03</span>The CSA top eleven</a></li>
+          <li><a href="#tenancy"><span>04</span>Sharing hardware with strangers</a></li>
+          <li><a href="#lockin"><span>05</span>Four kinds of lock-in</a></li>
+          <li><a href="#fees"><span>06</span>The 2024 exit-fee waivers</a></li>
+          <li><a href="#principles"><span>07</span>Six principles that travel</a></li>
+          <li><a href="#lab"><span>08</span>Lab: the model, computed</a></li>
+          <li><a href="#stride"><span>09</span>Lab: twelve threats, owners named</a></li>
+          <li><a href="#exit"><span>10</span>Lab: rehearse the exit</a></li>
+          <li><a href="#case"><span>11</span>Biashara Bank</a></li>
+          <li><a href="#quiz"><span>12</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>13</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="challenges" aria-labelledby="ch-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="ch-h">Six challenges, and only one of them is about attackers</h2>
+            <p>The deck's list is not a threat model. It is the set of things that actually get raised in a steering meeting.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The challenges of cloud computing</caption>
+              <thead>
+                <tr><th scope="col">Challenge</th><th scope="col">The concrete problem</th><th scope="col">Who usually carries it</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Security and privacy</th><td>Misconfiguration, account takeover, insider risk on both sides, data exposure</td><td>The customer, mostly — the provider's controls are the floor, not the finish</td></tr>
+                <tr><th scope="row">Availability</th><td>Provider outages and dependence on internet links; an SLA pays credits, not lost revenue</td><td>Shared, with the customer owning the architecture that survives an outage</td></tr>
+                <tr><th scope="row">Performance and latency</th><td>Distance to the nearest region; noisy neighbours on shared hardware</td><td>The customer, through design choices</td></tr>
+                <tr><th scope="row">Cost control</th><td>Idle resources, egress fees, and cryptojacking inflating a bill quietly</td><td>The customer — the provider bills what was consumed</td></tr>
+                <tr><th scope="row">Legal and compliance</th><td>Data residency, cross-border transfer, audit rights</td><td>The customer, with the provider supplying evidence</td></tr>
+                <tr><th scope="row">Lock-in and skills</th><td>Proprietary services make leaving hard; skilled cloud security staff are scarce</td><td>The customer, and the market</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Reading down that last column is the module in miniature: five of six land on the customer. The
+            provider's job is to make the floor solid and to document it. Everything above the floor — what you put
+            there, who can reach it, how you would leave — is yours.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the sentence to keep</p>
+            <p>
+              An SLA is a refund policy, not an availability guarantee. If the site earns money, "we got service
+              credits" is not a business continuity plan.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="model" aria-labelledby="model-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="model-h">Security <em>of</em> the cloud, security <em>in</em> the cloud</h2>
+            <p>One table, seven rows, three columns. It answers most arguments about who was supposed to do what.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl tbl--matrix">
+              <caption>Who secures what, by service model</caption>
+              <thead>
+                <tr><th scope="col">Responsibility</th><th scope="col">IaaS — e.g. EC2</th><th scope="col">PaaS — e.g. Elastic Beanstalk</th><th scope="col">SaaS — e.g. Microsoft 365</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Data classification &amp; accountability</th><td><span class="v v--c">customer</span></td><td><span class="v v--c">customer</span></td><td><span class="v v--c">customer</span></td></tr>
+                <tr><th scope="row">Identity &amp; access management</th><td><span class="v v--c">customer</span></td><td><span class="v v--c">customer</span></td><td><span class="v v--s">shared</span></td></tr>
+                <tr><th scope="row">Application security</th><td><span class="v v--c">customer</span></td><td><span class="v v--c">customer</span></td><td><span class="v v--p">provider</span></td></tr>
+                <tr><th scope="row">Network controls (firewall rules)</th><td><span class="v v--c">customer</span></td><td><span class="v v--s">shared</span></td><td><span class="v v--p">provider</span></td></tr>
+                <tr><th scope="row">Operating system patching</th><td><span class="v v--c">customer</span></td><td><span class="v v--p">provider</span></td><td><span class="v v--p">provider</span></td></tr>
+                <tr><th scope="row">Hypervisor &amp; host infrastructure</th><td><span class="v v--p">provider</span></td><td><span class="v v--p">provider</span></td><td><span class="v v--p">provider</span></td></tr>
+                <tr><th scope="row">Physical data centre security</th><td><span class="v v--p">provider</span></td><td><span class="v v--p">provider</span></td><td><span class="v v--p">provider</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Read the diagonal. The bottom two rows never move — nobody but the provider can touch a hypervisor or a
+            data centre door. The top row never moves either: <b>data accountability is always the customer's</b>.
+            Everything in between slides toward the provider as you climb from IaaS to SaaS, and that sliding is
+            where most arguments and most breaches live.
+          </p>
+
+          <p>
+            The classic failure is a customer who buys SaaS and stops configuring. Microsoft 365 patches the
+            application, but it will happily let you leave legacy authentication enabled, share a mailbox with an
+            external address, or let a tenant-wide admin account run without MFA. In the model, identity is
+            <em>shared</em> in SaaS — the word is doing a lot of work in that sentence.
+          </p>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="threats" aria-labelledby="th-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="th-h">The CSA top eleven, and why number one is number one</h2>
+            <p>Practitioners ranked what actually hurts. Eight of the eleven are things you configure, not things you buy.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Top Threats to Cloud Computing — CSA, “Pandemic Eleven” (2022)</caption>
+              <thead>
+                <tr><th scope="col">#</th><th scope="col">Threat</th><th scope="col">What it looks like when it happens</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td><b>Insufficient identity, credential, access and key management</b></td><td>A long-lived key in a repo, an over-privileged role, no MFA on the console account</td></tr>
+                <tr><td class="num">2</td><td>Insecure interfaces and APIs</td><td>An unauthenticated endpoint, no throttling, verbose errors leaking internals</td></tr>
+                <tr><td class="num">3</td><td>Misconfiguration and inadequate change control</td><td>A public bucket created on a Friday and never reviewed again</td></tr>
+                <tr><td class="num">4</td><td>Lack of cloud security architecture and strategy</td><td>Every team improvising its own account structure and network layout</td></tr>
+                <tr><td class="num">5</td><td>Insecure software development</td><td>Secrets in build logs, dependencies never scanned, injection reachable from the internet</td></tr>
+                <tr><td class="num">6</td><td>Unsecure third-party resources</td><td>A SaaS integration given broad access, then forgotten when the vendor is replaced</td></tr>
+                <tr><td class="num">7</td><td>System vulnerabilities</td><td>An unpatched image reused for eighteen months</td></tr>
+                <tr><td class="num">8</td><td>Accidental cloud data disclosure</td><td>A backup copied to a share, a support bundle with customer records in it</td></tr>
+                <tr><td class="num">9</td><td>Misconfiguration and exploitation of serverless and container workloads</td><td>A function with a wildcard role, an image with a shell and a cloud credential</td></tr>
+                <tr><td class="num">10</td><td>Organised crime, hackers and APTs</td><td>Credential stuffing at scale, then quiet lateral movement</td></tr>
+                <tr><td class="num">11</td><td>Cloud storage data exfiltration</td><td>A bucket readable by anyone, enumerated from a laptop in minutes</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Number one is not a technology that fails; it is a decision that was never made. Anyone can call
+            <span class="mono">CreateAccessKey</span>, and the key works until someone remembers to delete it. The
+            same is true of numbers two, three, four and five — all of them are your configuration, which is why
+            the model in section 02 matters more than the provider comparison in any sales deck.
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="tenancy" aria-labelledby="mt-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="mt-h">Sharing hardware with strangers</h2>
+            <p>Multi-tenancy is the economic engine of cloud and a category of risk you do not control directly.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Four multi-tenancy risks</caption>
+              <thead>
+                <tr><th scope="col">Risk</th><th scope="col">What it is</th><th scope="col">What you can do about it</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">VM escape</th>
+                  <td>A hypervisor flaw lets code break out of a guest. VENOM, <span class="mono">CVE-2015-3456</span>, was a buffer overflow in QEMU's virtual floppy controller reachable from inside a guest.</td>
+                  <td>Patch the host path fast; on IaaS that means trusting the provider's patch cadence and knowing it</td>
+                </tr>
+                <tr>
+                  <th scope="row">Side channels</th>
+                  <td>Spectre and Meltdown (2018) showed CPU speculation could leak memory across process and, in principle, VM boundaries.</td>
+                  <td>Microcode and kernel updates; avoid co-locating secrets with untrusted workloads where it is optional</td>
+                </tr>
+                <tr>
+                  <th scope="row">Noisy neighbour</th>
+                  <td>Another tenant's workload eats the shared resource you rely on. An availability problem, not a confidentiality one.</td>
+                  <td>Provisioned IOPS, dedicated tenancy or instance types for the critical tier; measure rather than assume</td>
+                </tr>
+                <tr>
+                  <th scope="row">Data remanence and isolation</th>
+                  <td>Storage must be wiped between tenants; logical isolation bugs in SaaS can expose another tenant's records.</td>
+                  <td>Encrypt with your own keys; test tenant boundaries in your own app; prefer providers that publish isolation testing</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The honest position: three of these four are the provider's engineering, and your lever is procurement
+            plus monitoring. That is not passivity — it is knowing which risks you can retire with a change and
+            which ones you can only watch, and writing that down.
+          </p>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="lockin" aria-labelledby="li-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="li-h">Four kinds of lock-in, and the exit step for each</h2>
+            <p>Lock-in is not one thing. Naming which kind you have is most of the mitigation.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Forms of lock-in and their mitigations</caption>
+              <thead>
+                <tr><th scope="col">Form</th><th scope="col">What creates it</th><th scope="col">Mitigation</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Data</th><td>Proprietary formats and sheer volume</td><td>Open formats, regular exports, and a plan for the transfer time — not just the price</td></tr>
+                <tr><th scope="row">Egress</th><td>Data-transfer-out charges</td><td>Know the per-gigabyte rate, model the exit, and keep large data where it will stay</td></tr>
+                <tr><th scope="row">Technical</th><td>Proprietary APIs and managed services baked into the design</td><td>Containers, Kubernetes, Terraform, open-source databases, an abstraction layer at the call boundary</td></tr>
+                <tr><th scope="row">Contractual</th><td>Long commitments and discounts in exchange for term</td><td>Exit clauses, data-return terms, notice periods, price caps</td></tr>
+                <tr><th scope="row">Skills</th><td>Staff who only know one platform</td><td>Vendor-neutral skills, documentation, cross-training</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The fifth row is the one that gets forgotten, and it is the one you cannot buy your way out of. A team
+            that has only ever used one provider's identity model will reproduce that model's assumptions
+            everywhere, and then discover during an exit that it never learned the primitives.
+          </p>
+
+          <p>
+            Section 10 puts a number on this: each component in the sample architecture is scored 0–12 across four
+            dimensions, and the two proprietary components come out at <b>12/12</b> while the portable ones sit at
+            zero. That score is not a prediction — it is a way to make an argument visible on one line.
+          </p>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="fees" aria-labelledby="fees-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="fees-h">In 2024 the exit fees were waived — which changes the price, not the problem</h2>
+            <p>Google in January, AWS and Microsoft in March. The EU Data Act pushed harder than any of them.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            Egress fees were the most quotable form of lock-in: a rate per gigabyte that made moving a large data
+            set cost real money on the way out. In 2024, under pressure from regulators and the EU Data Act's
+            switching provisions, Google Cloud, then AWS and Microsoft Azure, announced free data transfer for
+            customers moving all their data off the platform, with conditions attached.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>What the waivers do and do not fix</caption>
+              <thead>
+                <tr><th scope="col">They fix</th><th scope="col">They leave alone</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>The bill for one migration</td><td>The engineering — re-platforming a proprietary API is the expensive part</td></tr>
+                <tr><td>The argument that you are trapped by price</td><td>Contractual term, notice periods and credits already committed</td></tr>
+                <tr><td>The regulator's most measurable complaint</td><td>Skills: a team that has never run anything else</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            So the lesson the deck draws is the right one, and it is not “lock-in is solved”. It is that lock-in is
+            partly a policy and contract problem: read the exit terms, keep data portable, and <b>rehearse an
+            exit</b> for critical systems — because regulators now expect that of banks and other critical sectors,
+            and because a rehearsal is the only thing that turns an exit plan into a fact.
+          </p>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="principles" aria-labelledby="pr-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="pr-h">Six principles that survive whichever provider wins</h2>
+            <p>Product names change every year. These have not changed in decades.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Core security principles, and what each one forbids in practice</caption>
+              <thead>
+                <tr><th scope="col">Principle</th><th scope="col">Meaning in the cloud</th><th scope="col">What it forbids</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">CIA triad</th><td>Confidentiality, integrity and availability as the test for every decision</td><td>Choosing one silently — encryption that takes the service down is not a win</td></tr>
+                <tr><th scope="row">Defence in depth</th><td>Identity, network, host, application, data, monitoring — each assuming the one above failed</td><td>A single control described as "our security"</td></tr>
+                <tr><th scope="row">Least privilege</th><td>Only the permissions needed, only for as long as needed</td><td><span class="mono">AdministratorAccess</span> granted to save an afternoon</td></tr>
+                <tr><th scope="row">Zero trust</th><td>Never trust by network location; verify every request (NIST SP 800-207)</td><td>“It's inside the VPC, so it's fine”</td></tr>
+                <tr><th scope="row">Separation of duties</th><td>No one person can deploy, approve and delete critical resources alone</td><td>A single admin role that can do all three</td></tr>
+                <tr><th scope="row">Assume breach</th><td>Design detection, containment and recovery as if attackers are already inside</td><td>Architectures where the only control is the perimeter</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Zero trust is the one most often misfiled as a product. It is a statement about evidence: an
+            authenticated, authorised request from inside your own network is not more trustworthy than one from
+            outside, because the attacker who matters is already inside. NIST SP 800-207 is the reference that
+            makes it concrete — identity as the control plane, per-request evaluation, and no implicit trust from
+            where a packet came from.
+          </p>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="lab-h">Lab: the model, computed rather than coloured in</h2>
+            <p>The worksheet asks for a diagram coloured by hand. A rule table does it reproducibly — and shows its reasoning.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week07 · architecture.json, responsibility.py, exit_drill.py · output: report.json, diagram.svg</p>
+
+          <p>
+            Six components, six data flows, taken from the deck's sample architecture and given one extra
+            component — a proprietary serverless function — because the case study turns on proprietary services.
+            The tool encodes the seven-row model, walks every flow against eleven STRIDE rules keyed to measurable
+            properties, matches each finding to a CSA threat and derives the owner from the model itself.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week07/responsibility.py</span><span class="code__tag code__tag--ok">12 threats</span></p>
+<pre><span class="c-prompt">$</span> python3 responsibility.py
+architecture: Biashara Bank mobile banking API
+  6 components, 6 data flows
+
+component split
+  Mobile app (user)    external  not a cloud service
+  API server           iaas      customer 5 · shared 0 · provider 2  -&gt; customer
+  Accounts database    paas      customer 3 · shared 1 · provider 3  -&gt; split
+  Statement files      paas      customer 3 · shared 1 · provider 3  -&gt; split
+  Customer email       saas      customer 1 · shared 1 · provider 5  -&gt; provider
+  Statement generator  paas      customer 3 · shared 1 · provider 3  -&gt; split
+
+who owns the work
+   9 threats  customer (the bank's team)
+   2 threats  shared — provider supplies it, customer must configure it
+   1 threat   provider
+
+<span class="c-ok">12 threats mapped across 6 CSA categories</span></pre>
+          </div>
+
+          <figure class="shot">
+            <img src="../labs/week07/diagram.svg" alt="Generated diagram: six components, each with a stacked bar splitting its seven responsibility rows between customer, shared and provider, plus flow lines F1 to F6 and a lock-in score per component." width="960" height="525" />
+            <figcaption>
+              Generated by <span class="mono">responsibility.py</span> — not drawn by hand. The bar in each box is
+              that component's seven responsibility rows under its service model; the figure under it is its
+              lock-in score.
+            </figcaption>
+          </figure>
+
+          <p>
+            Two things fall out of the numbers that a hand-coloured diagram would hide. First, a PaaS component is
+            genuinely split three ways — the database and the function have three customer rows, one shared and
+            three provider, which is why “who owns it” has no single answer at that layer. Second, the customer
+            keeps nine of the twelve threats, against one for the provider.
+          </p>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="stride" aria-labelledby="str-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="str-h">Lab: twelve threats, each with a named owner</h2>
+            <p>STRIDE on every flow, matched to the CSA list, with the control and the party who pays for it.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            The worksheet's deliverable is a table: threat, STRIDE category, control, owner. Here it is, generated
+            from the architecture file — a threat only appears because a property of the flow or component made it
+            true.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Threat table · 12 findings across 6 flows · generated by responsibility.py</caption>
+              <thead>
+                <tr><th scope="col">Flow</th><th scope="col">STRIDE</th><th scope="col">Threat</th><th scope="col">CSA</th><th scope="col">Owner</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="id">F1 login</td><td>Spoofing</td><td>A human session needs only a password</td><td class="num">1</td><td>customer</td></tr>
+                <tr><td class="id">F2 balance</td><td>Elevation of privilege</td><td>Changing an identifier reaches another account's data</td><td class="num">1</td><td>customer</td></tr>
+                <tr><td class="id">F3 query</td><td>Repudiation</td><td>Actions on the query path leave no attributable record</td><td class="num">3</td><td>customer</td></tr>
+                <tr><td class="id">F3 query</td><td>Denial of service</td><td>Nothing limits how hard the query path can be called</td><td class="num">2</td><td>shared</td></tr>
+                <tr><td class="id">F3 query</td><td>Elevation of privilege</td><td>Service credentials reach every account, not one</td><td class="num">1</td><td>customer</td></tr>
+                <tr><td class="id">F3 query</td><td>Information disclosure</td><td>Personal data with no field-level protection</td><td class="num">8</td><td>customer</td></tr>
+                <tr><td class="id">F4 statements</td><td>Denial of service</td><td>Statement generation is unbounded</td><td class="num">2</td><td>shared</td></tr>
+                <tr><td class="id">F4 statements</td><td>Information disclosure</td><td>Statement files readable without an authenticated identity</td><td class="num">11</td><td>customer</td></tr>
+                <tr><td class="id">F4 statements</td><td>Information disclosure</td><td>Personal data with no field-level protection</td><td class="num">8</td><td>customer</td></tr>
+                <tr><td class="id">F5 notify</td><td>Denial of service</td><td>Send volume is unbounded</td><td class="num">2</td><td>provider</td></tr>
+                <tr><td class="id">F5 notify</td><td>Spoofing</td><td>Mail can claim any sender domain</td><td class="num">6</td><td>customer</td></tr>
+                <tr><td class="id">F6 admin</td><td>Spoofing</td><td>An admin session needs only a password</td><td class="num">1</td><td>customer</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            One row is worth arguing about, and the tool records the argument rather than hiding it: SPF, DKIM and
+            DMARC are DNS records the bank controls, so <b>sender authentication stays the customer's even on a
+            SaaS mail platform</b>, where the model says application security is the provider's. The three-column
+            model does not draw that edge. Every real architecture has a few of these, which is why the model is a
+            starting point for a conversation and not an answer key.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the honest gap</p>
+            <p>
+              DoS has no entry in the 2022 CSA list, so the tool maps it to “insecure interfaces and APIs” and says
+              so in the record. A mapping that admits it is approximate is more useful than one that pretends the
+              lists line up.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="exit" aria-labelledby="ex-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="ex-h">Lab: rehearse the exit, and prove it was complete</h2>
+            <p>An exit plan is a claim. An exit rehearsal is evidence — row counts, checksums, and a cost.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            The second deliverable the worksheet asks for is two lock-in risks with an exit step each. Rather than
+            describe one, the lab performs it: a local stand-in for a proprietary document store (opaque
+            <span class="mono">pk</span>/<span class="mono">sk</span> keys, a column map, a vendor version stamp)
+            is exported into three open formats, and the export is verified field by field.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week07/exit_drill.py</span><span class="code__tag code__tag--ok">passed</span></p>
+<pre><span class="c-prompt">$</span> python3 exit_drill.py
+source   proprietary_store.json · AcmeNoSQL/2.1 · table 'accounts'
+         4000 documents, provider-specific shape (pk/sk/cols)
+
+integrity  sha256 2cdc7866d94961de5febd0f87b931646…
+           every field of every record, canonical order
+
+  csv      4000 records  match
+  json     4000 records  match
+  sqlite   4000 records  match
+
+transfer
+  exported     1,212.2 KiB in 61 ms
+  egress cost  $0.000104 at $0.09/GB (pre-2024 rates)
+  with waiver  $0.00 — the 2024 exit-fee commitments cover this case
+  over 100 Mbps  0.10 s of link time for this volume
+
+<span class="c-ok">exit rehearsal passed — 4000 of 4000 records recovered in three open formats</span></pre>
+          </div>
+
+          <p>
+            The three formats matter: CSV for the finance team, JSON for the new service, SQLite as proof that the
+            data is not just dumped but <em>usable</em> — a schema, a primary key, a query. A backup nobody can query
+            is a folder of bytes.
+          </p>
+
+          <p>
+            The numbers also make the argument about what actually costs money. This volume's egress is a tenth of
+            a cent, and the 2024 waiver takes even that. The expensive part of an exit was never the transfer rate —
+            it is rewriting a proprietary API and retraining the team, which is why the lock-in score counts the
+            API and the skills, not only the bytes.
+          </p>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="case" aria-labelledby="case-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="case-h">Biashara Bank: a vendor, a five-year discount and a nervous committee</h2>
+            <p>Every question the committee asks has an answer in the previous nine sections.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            The bank is moving a mobile banking API to a public cloud. The vendor says ISO 27001 means security is
+            handled. The plan is proprietary serverless, a proprietary NoSQL database, and a five-year discounted
+            contract. The committee wants to know about price rises, long outages, a regulator-forced move, and
+            whether other tenants could see the bank's data.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The committee's questions, answered from this module</caption>
+              <thead>
+                <tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col">Section</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Does ISO 27001 mean security is handled?</td><td>No. It certifies the provider's controls and processes; your data, identities, configuration and application remain yours.</td><td>02</td></tr>
+                <tr><td>What happens if they raise prices?</td><td>Without a price cap and an exit clause, you accept them — the discount is priced against your inability to leave.</td><td>05, 06</td></tr>
+                <tr><td>What if the outage lasts a week?</td><td>Credits are not revenue. Multi-region or a runnable alternative, tested, is the only real answer.</td><td>01</td></tr>
+                <tr><td>What if the regulator requires a move?</td><td>Then the exit becomes an exercise, not a plan — which is why it is rehearsed now.</td><td>10</td></tr>
+                <tr><td>Can other tenants see our data?</td><td>Not by design; isolation is the provider's engineering, and encryption with your own keys is your lever.</td><td>04</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The answer the deck wants for “should the bank accept proprietary services at all” is: yes, with
+            conditions — that the call boundary is narrow and wrapped, that the data is exportable and exported on
+            a schedule, that the contract has an exit clause with a data-return format and a timeline, and that
+            someone other than the vendor knows how the system works. Proprietary is not a sin; <em>unmeasured</em>
+            proprietary is.
+          </p>
+        </div>
+      </section>
+
+      <!-- 12 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">12</p>
+          <div>
+            <h2 id="quiz-h">Five questions on Biashara Bank</h2>
+            <p>Scenario in section 11. Answer, then compare.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz">
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q1</span>Is the vendor's claim that “security is fully handled by us” correct?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>No — the bank still owns data, identities, configuration and application security</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>Yes for SaaS and PaaS</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>Only during business hours</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>Yes — ISO 27001 covers everything</span></label>
+              </div>
+              <p class="feedback" hidden><b>A.</b> Certification covers the provider's side of the model. The top row of the matrix — data classification and accountability — never moves to the provider, in any service model.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q2</span>Which choice increases lock-in the most?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>Exporting data monthly</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>Using containers</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>Proprietary serverless plus proprietary database plus a long contract</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>Terraform</span></label>
+              </div>
+              <p class="feedback" hidden><b>C.</b> Technical and contractual lock-in compound: the code assumes the platform, the data lives in a proprietary format, and the term stops you leaving while you rewrite. The lab scores exactly this pair at 12/12.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q3</span>“Other customers could see our data” relates to:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Elasticity</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Measured service</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Egress fees</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Multi-tenancy isolation</span></label>
+              </div>
+              <p class="feedback" hidden><b>D.</b> Shared hardware and shared databases require isolation between tenants — enforced by the provider's hypervisor and application logic, and by your own encryption and access design on top.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q4</span>Which CSA top threat is ranked number one?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>Serverless misconfiguration</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>Organised crime</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>Insufficient identity, credential, access and key management</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>System vulnerabilities</span></label>
+              </div>
+              <p class="feedback" hidden><b>C.</b> Identity tops the 2022 list. Eight of the twelve threats the lab mapped on the sample architecture fall under identity, APIs, change control or disclosure — all configuration, not provider failure.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q5</span>The best contract protection for exit is:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>Exit clauses with data-return format, timelines and assistance</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>No contract</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>Verbal assurances</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>A larger discount</span></label>
+              </div>
+              <p class="feedback" hidden><b>A.</b> A named format, a deadline and an assistance obligation turn exit from a favour into a deliverable. The 2024 fee waivers removed the transfer bill; the clause is what makes the rest enforceable.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 13 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take7-h">
+        <header class="sec-head">
+          <p class="sec-idx">13</p>
+          <div>
+            <h2 id="take7-h">What I am taking from module 07</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>The model is a tool for arguments, not a poster. <b>Nine of twelve threats were the customer's</b> on an architecture I picked myself.</span></li>
+            <li><span class="n">02</span><span>Every step up the stack moves work to the provider — except <b>data accountability</b>, which never moves.</span></li>
+            <li><span class="n">03</span><span>“Shared” is the dangerous word. It means the provider supplies a control and nobody configures it.</span></li>
+            <li><span class="n">04</span><span>Lock-in is four problems wearing one name: data, API, contract, skills. Name which one before proposing a fix.</span></li>
+            <li><span class="n">05</span><span>An exit plan is a claim; a rehearsal with checksums is evidence. Waived fees made leaving cheaper, not easy.</span></li>
+            <li><span class="n">06</span><span>The principles outlive the platforms: least privilege, zero trust, assume breach — the rest is product naming.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 08</p>
+            <h3>Identity and access management with AWS IAM</h3>
+            <p>Users, roles, policies and MFA — the controls that top the CSA list. <a href="../index.html#modules">Back to the module index →</a></p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>CSA, <em>Top Threats to Cloud Computing: Pandemic Eleven</em> (2022)</li>
+              <li>NIST SP 800-144 — <em>Guidelines on Security and Privacy in Public Cloud Computing</em></li>
+              <li>NIST SP 800-207 — <em>Zero Trust Architecture</em></li>
+              <li>Buyya et al. (2011), Ch. 23</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-06/index.html"><span>previous</span>← Module 06 — commissioning and troubleshooting</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 07 of a cloud computing and cloud security portfolio. The diagram above is generated by
+      <span class="mono">labs/week07/responsibility.py</span> from the architecture file, and the exit rehearsal by
+      <span class="mono">exit_drill.py</span>.
+    </p>
+    <p class="foot__meta">
+      <span>updated 17 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>
