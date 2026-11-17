@@ -1,0 +1,35 @@
+private cloud up on http://127.0.0.1:8773/  · sigv4 verified server-side
+
+1 · euca-describe-availability-zones verbose
+    building-a   19 free of 24 · available
+    building-b   12 free of 24 · available
+
+2 · euca-describe-images
+    emi-1A2B3C4D   ubuntu-22.04-lab       kernel eki-1A2B3C4D · ramdisk eri-1A2B3C4D
+    emi-5E6F7A8B   debian-12-hardened     kernel eki-5E6F7A8B · ramdisk eri-5E6F7A8B
+
+3 · euca-run-instances
+    i-97ab27eb  emi-1A2B3C4D  building-a  m1.small  state=pending  ip=10.0.0.10  (1.3 ms)
+    i-09d33829  emi-5E6F7A8B  building-b  m1.large  state=pending  ip=10.0.0.11  (1.0 ms)
+
+4 · euca-describe-instances (one call, all instances)
+    i-97ab27eb  pending → running  after 1.21 s
+    i-09d33829  pending → running  after 1.21 s
+    7 describe calls, 0.2 s apart — the poll is the API working as designed
+
+5 · euca-terminate-instances
+    i-97ab27eb  → 200  shutting-down
+    i-09d33829  → 200  shutting-down
+
+6 · refusals
+    unsigned      → 400 MissingAuthenticationToken
+    wrong secret  → 403 AuthFailure
+
+summary
+    launched      2 instances across 2 clusters
+    reached       running in 1.21 s
+    terminated    2/2
+    refusals      400 unsigned · 403 wrong secret
+    problems      none
+
+wrote mini_cloud.json

@@ -61,6 +61,7 @@
         <li><a href="#m02"><span>02</span>Cloud fundamentals</a></li>
         <li><a href="#m03"><span>03</span>Service and deployment models</a></li>
         <li><a href="#m04"><span>04</span>Vendors, web services and APIs</a></li>
+        <li><a href="#m05"><span>05</span>Private cloud with Eucalyptus</a></li>
       </ol>
     </aside>
 
@@ -207,6 +208,45 @@
                 <tr>
                   <td>Read it</td>
                   <td><a href="module-04/index.html">module 04 — vendors, web services and APIs →</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec" id="m05" aria-labelledby="m05-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="m05-h"><a href="module-05/index.html">Private cloud with Eucalyptus</a></h2>
+            <p>An AWS-compatible cloud on hardware you own: the five controllers, what each one takes with it, and a minimal control plane built locally to test the idea.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Module 05 at a glance</caption>
+              <tbody>
+                <tr>
+                  <td style="width:9rem">Topics</td>
+                  <td>the CLC, Walrus, cluster and storage controllers, node controllers · EMI/EKI/ERI images · Euare identity · euca2ools and boto3 with <span class="mono">endpoint_url</span> · ElasticFox and HybridFox · NASA Nebula and OpenStack</td>
+                </tr>
+                <tr>
+                  <td>Interactive</td>
+                  <td>The architecture as five components, each opening to its job, what breaks if it falls, and its AWS twin</td>
+                </tr>
+                <tr>
+                  <td>Lab</td>
+                  <td>A 369-line EC2 Query-compatible control plane on port 8773, verifying the module 04 signer server-side</td>
+                </tr>
+                <tr>
+                  <td>Measured</td>
+                  <td>2 clusters · launch <span class="mono">pending → running</span> in 1.21 s · 400 unsigned · 403 wrong secret</td>
+                </tr>
+                <tr>
+                  <td>Read it</td>
+                  <td><a href="module-05/index.html">module 05 — private cloud with Eucalyptus →</a></td>
                 </tr>
               </tbody>
             </table>

@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 05 — Private cloud with Eucalyptus · Cloud computing security</title>
+<meta name="description" content="Why an AWS-compatible private cloud was the interesting idea: the CLC, Walrus, cluster, storage and node controllers, what survives what failure, and a minimal EC2-compatible control plane built and verified locally." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 05</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 05 — private cloud with Eucalyptus</p>
+      <h1 id="page-title">The product was the API, not the hypervisor.</h1>
+      <p class="lede">
+        Eucalyptus is dead software with a live idea: implement Amazon's API on hardware you own, and every AWS
+        tool, script and skill works unchanged. That is why banks and ministries wanted it, why OpenStack inherited
+        the shape of it, and why the architecture is still worth an afternoon — a control plane is a control plane
+        wherever it runs.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#what">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>what the lab ran</span><span>local, no account</span></div>
+        <dl class="factlist">
+          <div><dt>2</dt><dd>clusters in the control plane I wrote, one per building — the Kaunti layout.</dd></div>
+          <div><dt>1.21 s</dt><dd><span class="mono">pending → running</span>, observed by polling the API.</dd></div>
+          <div><dt>400 / 403</dt><dd>unsigned request, and one signed with the wrong secret.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>05 — private cloud with Eucalyptus</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Intermediate, five of fifteen</dd>
+      </div>
+      <div>
+        <dt>builds on</dt>
+        <dd>03 private vs public · 04 signed requests</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>EC2-compatible control plane, signature checked server-side</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week05</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#what" data-spy><span>01</span>What it was, and what it proved</a></li>
+        <li><a href="#architecture" data-spy><span>02</span>Three levels, five controllers</a></li>
+        <li><a href="#mapping" data-spy><span>03</span>Mapped onto AWS</a></li>
+        <li><a href="#request" data-spy><span>04</span>Life of one launch request</a></li>
+        <li><a href="#query" data-spy><span>05</span>Querying it</a></li>
+        <li><a href="#tools" data-spy><span>06</span>Tools, then and now</a></li>
+        <li><a href="#failures" data-spy><span>07</span>What survives what</a></li>
+        <li><a href="#nebula" data-spy><span>08</span>From Nebula to OpenStack</a></li>
+        <li><a href="#security" data-spy><span>09</span>Securing both planes</a></li>
+        <li><a href="#lab" data-spy><span>10</span>Lab evidence</a></li>
+        <li><a href="#case" data-spy><span>11</span>Kaunti Health</a></li>
+        <li><a href="#quiz" data-spy><span>12</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>13</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 13 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#what"><span>01</span>What it was, and what it proved</a></li>
+          <li><a href="#architecture"><span>02</span>Three levels, five controllers</a></li>
+          <li><a href="#mapping"><span>03</span>Mapped onto AWS</a></li>
+          <li><a href="#request"><span>04</span>Life of one launch request</a></li>
+          <li><a href="#query"><span>05</span>Querying it</a></li>
+          <li><a href="#tools"><span>06</span>Tools, then and now</a></li>
+          <li><a href="#failures"><span>07</span>What survives what</a></li>
+          <li><a href="#nebula"><span>08</span>From Nebula to OpenStack</a></li>
+          <li><a href="#security"><span>09</span>Securing both planes</a></li>
+          <li><a href="#lab"><span>10</span>Lab evidence</a></li>
+          <li><a href="#case"><span>11</span>Kaunti Health</a></li>
+          <li><a href="#quiz"><span>12</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>13</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="what" aria-labelledby="what-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="what-h">Open-source IaaS, built to be a drop-in for EC2</h2>
+            <p>Elastic Utility Computing Architecture for Linking Your Programs To Useful Systems — a research project that answered a question nobody else had answered yet.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The short history, because the ending matters to your decision</caption>
+              <tbody>
+                <tr><th scope="row">2008</th><td>First release. Began as research at the University of California, Santa Barbara — an open-source IaaS for private and hybrid clouds.</td></tr>
+                <tr><th scope="row">API</th><td>Implemented EC2, S3, EBS, IAM, Auto Scaling, ELB and CloudWatch-style APIs. AWS tools and scripts worked against it without modification.</td></tr>
+                <tr><th scope="row">2014</th><td>Eucalyptus Systems acquired by HP; development later moved to AppScale.</td></tr>
+                <tr><th scope="row">Today</th><td>Largely legacy. New private clouds choose OpenStack, VMware or a public region — worth saying plainly rather than pretending otherwise.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The reason it is still studied is not nostalgia. It is the first clear demonstration that a cloud is a
+            <b>control plane plus a promise</b>: the API contract is the product, and the hardware behind it is an
+            implementation detail. Once you have seen that, "I know AWS" becomes a transferable claim instead of a
+            vendor loyalty, and the same insight explains why Terraform, LocalStack and OpenStack all work the way
+            they do.
+          </p>
+
+          <p>
+            It also settles the question <a href="../module-03/index.html#deployment">module 03</a> raised: why a
+            bank or a ministry would build this at all. Data residency, control of the hardware, and a compliance
+            story you can point at — paid for with the obligation to secure every layer yourself.
+          </p>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="architecture" aria-labelledby="arch-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="arch-h">Three levels, five controllers, and one of them matters most</h2>
+            <p>Pick a component to see its job, and what an attacker gains by taking it.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The hierarchy: one cloud, many clusters, many nodes</caption>
+              <thead>
+                <tr><th scope="col">Level</th><th scope="col">Component</th><th scope="col">Job</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Cloud</td><td class="id">CLC</td><td>Cloud Controller — the entry point. Exposes the APIs and console, authenticates users, makes high-level scheduling decisions.</td></tr>
+                <tr><td>Cloud</td><td class="id">Walrus / OSG</td><td>S3-compatible object storage: machine images, snapshots, user buckets.</td></tr>
+                <tr><td>Cluster</td><td class="id">CC</td><td>Cluster Controller — one cluster per availability zone: schedules VMs, manages virtual networking.</td></tr>
+                <tr><td>Cluster</td><td class="id">SC</td><td>Storage Controller — block volumes and snapshots, the EBS equivalent.</td></tr>
+                <tr><td>Node</td><td class="id">NC</td><td>Node Controller — on every physical host; drives KVM or Xen to start, stop and inspect instances.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <figure class="stackfig" id="arch">
+            <div class="stack-controls" role="group" aria-label="Components">
+              <button type="button" class="chip-btn" data-comp="clc" aria-pressed="true">CLC</button>
+              <button type="button" class="chip-btn" data-comp="walrus" aria-pressed="false">Walrus</button>
+              <button type="button" class="chip-btn" data-comp="cc" aria-pressed="false">Cluster Controller</button>
+              <button type="button" class="chip-btn" data-comp="sc" aria-pressed="false">Storage Controller</button>
+              <button type="button" class="chip-btn" data-comp="nc" aria-pressed="false">Node Controller</button>
+            </div>
+
+            <div class="step" data-panel="clc">
+              <p class="step__label">cloud level · the entry point</p>
+              <p>
+                The only component a user ever talks to. It authenticates every request, checks quotas and
+                policies, and forwards work down to a cluster with capacity. In later versions a User-Facing
+                Service sat in front of it, but the CLC stayed the thing that decides.
+              </p>
+              <p><b>If it falls:</b> the cloud still runs — instances on the nodes keep serving traffic — but nobody can launch, query or terminate anything. It is the difference between an outage and an outage you cannot see.</p>
+              <p><b>AWS twin:</b> the regional control plane behind every `ec2` API call. <a href="../module-04/index.html#outage">Module 04's us-east-1 case</a> is the same failure at provider scale.</p>
+            </div>
+
+            <div class="step" data-panel="walrus" hidden>
+              <p class="step__label">cloud level · object storage</p>
+              <p>
+                An S3-compatible store for machine images, snapshots and user buckets. Nodes cache images locally,
+                which is why a launch does not necessarily pull the whole image across the network every time.
+              </p>
+              <p><b>If it falls:</b> running instances survive; new launches stall at the image fetch, and any bucket-backed application breaks.</p>
+              <p><b>AWS twin:</b> S3. <b>Security note:</b> an object store is where public-read mistakes live — the same mistake, on your hardware.</p>
+            </div>
+
+            <div class="step" data-panel="cc" hidden>
+              <p class="step__label">cluster level · scheduler</p>
+              <p>
+                Manages one group of nodes — one availability zone. It picks the node, allocates addresses and
+                configures the virtual network before the node controller boots anything.
+              </p>
+              <p><b>If it falls:</b> that cluster stops accepting new work. Other clusters are unaffected — the point of the Kaunti case in section 11.</p>
+              <p><b>AWS twin:</b> an Availability Zone's scheduler, which is why the mapping is one cluster = one AZ.</p>
+            </div>
+
+            <div class="step" data-panel="sc" hidden>
+              <p class="step__label">cluster level · block storage</p>
+              <p>
+                Provides volumes and snapshots — persistent disks attached to instances, independent of the
+                instance's life.
+              </p>
+              <p><b>If it falls:</b> attached volumes may keep serving reads from cache, but new attachments and snapshots fail, and anything that reboots loses its disk.</p>
+              <p><b>AWS twin:</b> EBS. <b>Security note:</b> snapshots are backups, so they are also a copy of the data that outlives the instance — and a frequent leak.</p>
+            </div>
+
+            <div class="step" data-panel="nc" hidden>
+              <p class="step__label">node level · hypervisor driver</p>
+              <p>
+                Runs on every physical host and controls KVM or Xen: start, stop, inspect. This is the component
+                with its hands on the actual virtual machines.
+              </p>
+              <p><b>If it falls:</b> the instances on that host go with it. One node is the smallest blast radius in the system, which is why capacity planning spreads work across many.</p>
+              <p><b>AWS twin:</b> the hypervisor fleet. <b>Security note:</b> an unpatched NC is guest-escape territory — the one failure that crosses the tenant boundary.</p>
+            </div>
+
+            <figcaption class="stack-summary">
+              The hierarchy also decides your failure domains. Cloud-level components are shared by everyone;
+              cluster-level ones are shared by one building; a node is shared by the instances on it.
+            </figcaption>
+          </figure>
+
+          <aside class="note">
+            <p class="note__label">ask this in an interview</p>
+            <p>
+              "Which component would you compromise first?" The CLC — not because it holds the data, but because it
+              issues the credentials and decides where work goes. In AWS terms: the control plane, not the data
+              plane. Attackers who want persistence take the thing that hands out permissions.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="mapping" aria-labelledby="map-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="map-h">Every concept has an AWS twin, down to the naming</h2>
+            <p>The compatibility was deliberate: same calls, same objects, different hardware underneath.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Eucalyptus mapped onto AWS</caption>
+              <thead>
+                <tr><th scope="col">AWS service</th><th scope="col">Eucalyptus component</th><th scope="col">Purpose</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="id">EC2</td><td>CLC + CC + NC</td><td>Launch and manage instances</td></tr>
+                <tr><td class="id">S3</td><td>Walrus / Object Storage Gateway</td><td>Images, buckets, objects</td></tr>
+                <tr><td class="id">EBS</td><td>Storage Controller</td><td>Persistent volumes and snapshots</td></tr>
+                <tr><td class="id">IAM</td><td>Euare</td><td>Accounts, users, groups, policies</td></tr>
+                <tr><td class="id">AMI</td><td>EMI, with EKI kernel and ERI ramdisk</td><td>The machine image triple used to boot</td></tr>
+                <tr><td class="id">Availability Zone</td><td>Cluster</td><td>Isolated group of nodes — a failure domain</td></tr>
+                <tr><td class="id">Security groups, key pairs, Elastic IPs</td><td>Same concepts, same API calls</td><td>Firewalling, SSH access, static addresses</td></tr>
+                <tr><td class="id">ELB, Auto Scaling, CloudWatch</td><td>Equivalent services in 3.3+</td><td>Load balancing, scaling, monitoring</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The image triple is the detail people miss. An AWS AMI is one identifier; a Eucalyptus image is an
+            <b>EMI</b> plus a kernel (<b>EKI</b>) and a ramdisk (<b>ERI</b>), because the system boots the kernel you
+            registered rather than the one inside the disk image. The lab prints all three per image for that
+            reason.
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="request" aria-labelledby="req-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="req-h">Six hops between a command and a running machine</h2>
+            <p>Trace it once and the diagram stops being a diagram.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption><span class="mono">euca-run-instances</span>, end to end</caption>
+              <thead>
+                <tr><th scope="col">Step</th><th scope="col">What happens</th><th scope="col">Where it can fail</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="num">1</td><td>The client sends a <b>signed</b> API request to the CLC.</td><td>Bad signature, expired timestamp, unknown key — the refusals in section 10.</td></tr>
+                <tr><td class="num">2</td><td>The CLC authenticates, applies Euare policy, checks quota.</td><td>Permission or quota — the most common 403 in a shared private cloud.</td></tr>
+                <tr><td class="num">3</td><td>The CLC picks a cluster with capacity and forwards the request.</td><td>No capacity anywhere: the request queues or is rejected.</td></tr>
+                <tr><td class="num">4</td><td>The CC selects a node, allocates addresses, configures the network.</td><td>Address exhaustion, network misconfiguration.</td></tr>
+                <tr><td class="num">5</td><td>The NC fetches the EMI from Walrus or its cache and boots it under the hypervisor.</td><td>Missing image, unsupported kernel, hypervisor mismatch.</td></tr>
+                <tr><td class="num">6</td><td>State moves <span class="mono">pending → running</span>; the user connects with their key pair.</td><td>Boot failure — visible only by watching the state, which is why the lab polls.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Notice where the signature check sits: <b>step 1, before anything else</b>. Authentication is not a
+            feature of the application layer here, it is the price of entry to the control plane — the same
+            conclusion <a href="../module-04/index.html#auth">module 04</a> reached from the other direction.
+          </p>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="query" aria-labelledby="q-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="q-h">Querying it: euca2ools, then boto3 with an endpoint URL</h2>
+            <p>One flag is the whole argument for API compatibility.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="code">
+            <p class="code__head"><span>shell · euca2ools</span><span class="code__tag">from the deck</span></p>
+<pre>source ~/.euca/eucarc                  # endpoints and keys, issued by the CLC
+
+euca-describe-availability-zones verbose   # free and maximum slots per cluster
+euca-describe-images                        # EMI + EKI + ERI
+euca-create-keypair lab-key &gt; lab-key.pem  # private key shown once — chmod 400
+euca-run-instances -k lab-key -t m1.small emi-1A2B3C4D
+euca-describe-instances</pre>
+          </div>
+
+          <div class="code">
+            <p class="code__head"><span>python3 · boto3</span><span class="code__tag">endpoint_url is the point</span></p>
+<pre>import boto3
+
+ec2 = boto3.client(
+    "ec2",
+    endpoint_url="https://compute.mycloud.local:8773/",
+    aws_access_key_id=KEY,
+    aws_secret_access_key=SECRET,
+    region_name="eucalyptus",
+)
+print(ec2.describe_instances())</pre>
+          </div>
+
+          <p>
+            The SDK does not know it is talking to a private cloud. Nothing in that snippet is Eucalyptus-specific
+            except the URL and the region name — which is exactly what "AWS-compatible" bought: the ability to
+            develop against a laptop or a private cloud and deploy to a public one without rewriting.
+          </p>
+
+          <p>
+            The credentials in <span class="mono">eucarc</span> deserve the same treatment as any AWS key: never
+            committed, rotated, and issued per person rather than per team. The <span class="mono">-k lab-key</span>
+            flag is the other half of it — the private key is displayed once, and if it lands in a shell history you
+            have lost it.
+          </p>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="tools" aria-labelledby="tools-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="tools-h">Two browser extensions died; the CLI did not</h2>
+            <p>A short history of tooling, and why the command line outlived the graphical ones.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Management tools</caption>
+              <thead>
+                <tr><th scope="col">Tool</th><th scope="col">What it did</th><th scope="col">Status</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Euca2ools</th><td><span class="mono">euca-*</span>, <span class="mono">euare-*</span>, <span class="mono">euserv-*</span> — scriptable CLI for Eucalyptus and AWS</td><td>Historical, still the clearest way to learn the API</td></tr>
+                <tr><th scope="row">ElasticFox</th><td>Firefox extension from Amazon for managing EC2 in the browser</td><td>Discontinued</td></tr>
+                <tr><th scope="row">HybridFox</th><td>Fork that managed Eucalyptus <em>and</em> AWS from one panel — the hybrid-cloud pitch in a sidebar</td><td>Discontinued; modern browsers cannot run it</td></tr>
+                <tr><th scope="row">Eucalyptus console</th><td>Web console for users and administrators</td><td>Historical</td></tr>
+                <tr><th scope="row">Now</th><td>AWS Console and CLI, OpenStack Horizon and CLI, Terraform, LocalStack for offline practice</td><td>Current</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The pattern is worth noticing: the graphical tools were the ones that needed a plugin runtime, and they
+            died with it. The CLI and the SDK survived because they were thin clients over an HTTP API — the same
+            reason <a href="../module-04/index.html#cli">module 04</a> could ask the same three questions of three
+            clouds with three commands.
+          </p>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="failures" aria-labelledby="fail-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="fail-h">What survives what: the table the diagram does not give you</h2>
+            <p>Private cloud means you own the failure domains too — and you should know them before the power cut.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>If this dies, what still works</caption>
+              <thead>
+                <tr><th scope="col">Component lost</th><th scope="col">Running instances</th><th scope="col">New launches</th><th scope="col">Other clusters</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">CLC</th><td>Keep running</td><td>Impossible</td><td>Alive, but unreachable — no API to ask</td></tr>
+                <tr><th scope="row">Walrus</th><td>Keep running</td><td>Stall at the image fetch unless cached</td><td>Alive; cached images may still boot</td></tr>
+                <tr><th scope="row">One CC</th><td>Keep running</td><td>Stop in that cluster only</td><td>Unaffected</td></tr>
+                <tr><th scope="row">One SC</th><td>Keep running</td><td>Continue without new volumes</td><td>Unaffected</td></tr>
+                <tr><th scope="row">One NC</th><td>Instances on that host stop</td><td>Reschedule unless the cluster is full</td><td>Unaffected</td></tr>
+                <tr><th scope="row">Power to one building</th><td>Everything in that cluster stops</td><td>Stop in that cluster</td><td>Continue — separate failure domain</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            That last row is the Kaunti Health case in one line, and it is also the honest answer to "is a private
+            cloud resilient?" It is exactly as resilient as the way you laid out clusters, power and network — no
+            more, and nobody else's problem to fix.
+          </p>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="nebula" aria-labelledby="nebula-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="nebula-h">NASA needed more, wrote its own, and started OpenStack</h2>
+            <p>2008–2010, NASA Ames. The clearest case of a private cloud outgrowing its software.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            NASA built <b>Nebula</b>, a private cloud for its scientists, and experimented with Eucalyptus. When the
+            requirement outgrew what the software could do, NASA engineers wrote their own compute controller. In
+            2010 that code was combined with Rackspace's storage software and released as <b>OpenStack</b> — which
+            now runs large private clouds, including CERN's and several telecom networks.
+          </p>
+
+          <p>
+            The lesson is not "Eucalyptus lost". It is that the control plane is an artefact you can build, fork or
+            replace, and that doing so is a normal engineering response to a requirement no vendor meets. It is also
+            a warning: a private cloud is a product you now maintain, with a roadmap you have to staff.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the security consequence</p>
+            <p>
+              Private clouds give control and residency, and hand you every layer's security with it: patching the
+              controllers, protecting the API endpoints, isolating tenants, and knowing that the responsibility
+              matrix from <a href="../module-03/index.html#stack">module 03</a> has no provider column to hide in.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="security" aria-labelledby="sec-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="sec-h">Two planes, two different jobs</h2>
+            <p>Control plane failures are loud; data plane failures are quiet and worse.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="split">
+            <div>
+              <h3>Control plane</h3>
+              <ul>
+                <li>Restrict CLC, console and API ports to admin networks</li>
+                <li>TLS on every API endpoint — the signature protects integrity, not confidentiality</li>
+                <li>Rotate and protect credentials in <span class="mono">eucarc</span> files</li>
+                <li>Least-privilege Euare policies per department</li>
+                <li>Log and monitor all API activity centrally</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Data plane</h3>
+              <ul>
+                <li>Patch hypervisors and node controllers promptly</li>
+                <li>Isolate tenant networks — VLAN or managed networking</li>
+                <li>Encrypt volumes and snapshots</li>
+                <li>Use hardened base images only</li>
+                <li>Physically secure the data centre — it is yours now</li>
+              </ul>
+            </div>
+          </div>
+
+          <p>
+            The split is the same one <a href="../module-04/index.html#auth">module 04</a> drew from the outside: the
+            control plane answers "who may do what", the data plane answers "what happens when they do". In a
+            private cloud you are the provider for both, and the audit findings below are what happens when the
+            first one is left open.
+          </p>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="lab-h">Lab: I could not install Eucalyptus, so I built the part that mattered</h2>
+            <p>An EC2-compatible control plane on localhost, with signatures verified server-side — and the same refusals a real one gives.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week05 · minicloud.py, euca_client.py · logs: euca_client.log, mini_cloud.json</p>
+
+          <h3>Why not the lab sheet's route</h3>
+          <p>
+            <span class="status status--planned">not run</span>&nbsp;
+            The sheet offers two paths: a Eucalyptus FastStart VM, or LocalStack as an AWS-compatible substitute.
+            FastStart images are no longer distributed — the project was archived years ago — and LocalStack needs
+            Docker, which this machine does not have. Rather than write up a lab I did not do, I built the thing the
+            module is actually about: <b>a control plane that speaks the EC2 Query API</b>, so the interesting
+            questions stop being theoretical.
+          </p>
+
+          <h3>What I built</h3>
+          <p>
+            <span class="mono">minicloud.py</span> is 369 lines of standard library and comments: a threaded HTTP server on port
+            8773 — the port a real Cloud Controller listens on — implementing five EC2 actions in the EC2 XML
+            envelope, plus Signature Version 4 verification on every request. The verification calls the signer
+            written in <a href="../module-04/index.html#auth">module 04</a>, so the code that signs is the code that
+            checks: a mismatch is a real mismatch, not two bugs agreeing.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Implemented actions, and what each one is for</caption>
+              <thead>
+                <tr><th scope="col">Action</th><th scope="col">Equivalent CLI</th><th scope="col">What the lab does with it</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="id">DescribeAvailabilityZones</td><td><span class="mono">euca-describe-availability-zones verbose</span></td><td>Reads each cluster's free and maximum slots — two buildings, 24 slots each</td></tr>
+                <tr><td class="id">DescribeImages</td><td><span class="mono">euca-describe-images</span></td><td>Lists two EMIs with their EKI kernel and ERI ramdisk</td></tr>
+                <tr><td class="id">RunInstances</td><td><span class="mono">euca-run-instances</span></td><td>Launches one instance into each cluster</td></tr>
+                <tr><td class="id">DescribeInstances</td><td><span class="mono">euca-describe-instances</span></td><td>Polls until the states settle, recording the transition</td></tr>
+                <tr><td class="id">TerminateInstances</td><td><span class="mono">euca-terminate-instances</span></td><td>Tears both down and confirms <span class="mono">terminated</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3>What it did</h3>
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week05/euca_client.py</span><span class="code__tag code__tag--ok">all states observed</span></p>
+<pre><span class="c-prompt">$</span> python3 euca_client.py
+private cloud up on http://127.0.0.1:8773/  · sigv4 verified server-side
+
+1 · euca-describe-availability-zones verbose
+    building-a   19 free of 24 · available
+    building-b   12 free of 24 · available
+
+2 · euca-describe-images
+    emi-1A2B3C4D   ubuntu-22.04-lab       kernel eki-1A2B3C4D · ramdisk eri-1A2B3C4D
+    emi-5E6F7A8B   debian-12-hardened     kernel eki-5E6F7A8B · ramdisk eri-5E6F7A8B
+
+3 · euca-run-instances
+    i-97ab27eb  emi-1A2B3C4D  building-a  m1.small  state=pending  ip=10.0.0.10  (1.3 ms)
+    i-09d33829  emi-5E6F7A8B  building-b  m1.large  state=pending  ip=10.0.0.11  (1.0 ms)
+
+4 · euca-describe-instances (one call, all instances)
+    i-97ab27eb  pending → running  after 1.21 s
+    i-09d33829  pending → running  after 1.21 s
+    7 describe calls, 0.2 s apart — the poll is the API working as designed
+
+5 · euca-terminate-instances
+    i-97ab27eb  → 200  shutting-down
+    i-09d33829  → 200  shutting-down
+
+6 · refusals
+    unsigned      → 400 MissingAuthenticationToken
+    wrong secret  → 403 AuthFailure
+
+<span class="c-ok">summary
+    launched      2 instances across 2 clusters
+    reached       running in 1.21 s
+    terminated    2/2
+    refusals      400 unsigned · 403 wrong secret
+    problems      none</span></pre>
+          </div>
+
+          <h3>What the refusals prove</h3>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Measured · every request signed by the module 04 code</caption>
+              <thead>
+                <tr><th scope="col">Request</th><th scope="col">Status</th><th scope="col">Error code</th><th scope="col">Why it matters</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Signed correctly</td><td class="num">200</td><td>—</td><td>The contract works: same envelope, same signature, different cloud.</td></tr>
+                <tr><td>No <span class="mono">Authorization</span> header</td><td class="num">400</td><td class="id">MissingAuthenticationToken</td><td>Rejected before authentication — the request never reaches the scheduler.</td></tr>
+                <tr><td>Signed with the wrong secret</td><td class="num">403</td><td class="id">AuthFailure</td><td>The header was parsed and the signature compared, then refused. This is the check that catches tampering and replay.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <aside class="note">
+            <p class="note__label">what this does not prove</p>
+            <p>
+              It is not Eucalyptus, not a hypervisor, and not a private cloud anyone should run. There are no VMs —
+              the instance states are timed transitions in memory. What it does prove is that the control plane is
+              the interesting part, that I can implement one against a real API contract, and that I can verify
+              signatures rather than merely generate them. The hypervisor work is still the next practical step.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="case" aria-labelledby="case-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="case-h">Kaunti Health: a console on public Wi-Fi and one shared credentials file</h2>
+            <p>A county health department, thirty clinics, twelve node servers, and an audit with two findings.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The facts, as the case gives them</caption>
+              <tbody>
+                <tr><th scope="row">Estate</th><td>One Cloud Controller, two clusters (one per building), twelve node servers, running patient-records and lab systems for 30 clinics.</td></tr>
+                <tr><th scope="row">Complaint</th><td>Doctors say new test servers take days to arrive.</td></tr>
+                <tr><th scope="row">Audit finding 1</th><td>The Cloud Controller console is reachable from the county's public Wi-Fi.</td></tr>
+                <tr><th scope="row">Audit finding 2</th><td>Several staff share one administrator credentials file.</td></tr>
+                <tr><th scope="row">Power cut</th><td>Building B lost power; everything in that cluster stopped. Building A kept running.</td></tr>
+                <tr><th scope="row">Obligation</th><td>Patient data; must comply with data-protection rules.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Rank by what an attacker can reach, and the console finding wins: the CLC authenticates and authorises
+            everything, and it is answering on a network full of patients, visitors and staff phones. The shared
+            credentials file removes the only remaining attribution — every action looks like every other
+            administrator, so the log tells you what happened and not who did it.
+          </p>
+
+          <p>
+            The power cut is not a security failure; it is the architecture working. Two clusters are two failure
+            domains, and the case documents exactly what section 07's table predicts. The fix for the first two
+            findings — admin VLAN or VPN with TLS, individual Euare users, reviewable logs — is the same work as
+            securing any control plane, which is why the module spends its time there.
+          </p>
+        </div>
+      </section>
+
+      <!-- 12 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">12</p>
+          <div>
+            <h2 id="quiz-h">Five questions on Kaunti Health</h2>
+            <p>Scenario in section 11. Answer, then compare — each one has an explanation.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz">
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q1</span>Which component should be the top priority to protect?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>The Walrus bucket holding logos</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>A single Node Controller</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>The Cloud Controller (CLC)</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>A test VM</span></label>
+              </div>
+              <p class="feedback" hidden><b>C. The Cloud Controller.</b> It is the entry point and controls the entire cloud — every credential, every scheduling decision. Losing it stops every operation, including the ones you would use to investigate.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q2</span>Each building's cluster behaves most like which AWS concept?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>An Availability Zone</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>A security group</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>An S3 bucket</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>A region</span></label>
+              </div>
+              <p class="feedback" hidden><b>A. An Availability Zone.</b> A cluster is an isolated group of nodes — a separate failure domain, which is exactly what an AZ is. A region would be the whole cloud.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q3</span>Which Eucalyptus component provides EBS-like volumes?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Euare</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Walrus</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Node Controller</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Storage Controller</span></label>
+              </div>
+              <p class="feedback" hidden><b>D. The Storage Controller.</b> Block volumes and snapshots. Walrus is object storage (S3), Euare is identity (IAM), and the NC runs the hypervisor.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="A">
+              <legend><span class="q__num">Q4</span>The shared credentials file violates which principle most directly?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>Individual accountability and least privilege</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>Broad network access</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>Measured service</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>Elasticity</span></label>
+              </div>
+              <p class="feedback" hidden><b>A. Accountability and least privilege.</b> Shared credentials make actions untraceable to a person, and in practice leave everyone holding administrator rights they do not need.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q5</span>Why did Building A keep running during the power cut?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>Node controllers share power</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>Walrus cached everything</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>Clusters are separate failure domains</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>The CLC moved the VMs instantly</span></label>
+              </div>
+              <p class="feedback" hidden><b>C. Separate failure domains.</b> Each cluster — each building — is independent, like an Availability Zone. That is also why the CLC sitting in one building is a single point of failure worth planning around.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 13 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take5-h">
+        <header class="sec-head">
+          <p class="sec-idx">13</p>
+          <div>
+            <h2 id="take5-h">What I am taking from module 05</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>A cloud is an <b>API contract plus hardware</b>; that is why skills move between providers and why private clouds were ever possible.</span></li>
+            <li><span class="n">02</span><span>The hierarchy — cloud, cluster, node — is also the <b>failure hierarchy</b>, and you choose it when you lay out buildings and power.</span></li>
+            <li><span class="n">03</span><span>The <b>control plane</b> is the prize: it issues credentials and decides placement. Protect it before you harden any VM.</span></li>
+            <li><span class="n">04</span><span>Compatibility is a strategy, not a feature — and it is why the CLI outlived every graphical tool built on the same API.</span></li>
+            <li><span class="n">05</span><span>Private cloud buys control and residency at the price of owning <b>every layer's security</b>, including the building.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 06</p>
+            <h3>Commissioning and troubleshooting cloud servers</h3>
+            <p>Standing up server infrastructure quickly and securely, and diagnosing it when it misbehaves. <a href="../index.html#modules">Back to the module index →</a></p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>Buyya et al. (2011), <em>Cloud Computing: Principles and Paradigms</em>, Ch. 4 (private cloud IaaS)</li>
+              <li>Nurmi et al. (2009), “The Eucalyptus Open-source Cloud-computing System”, IEEE/ACM CCGrid</li>
+              <li>Velte et al. (2009), <em>Cloud Computing: A Practical Approach</em>, Ch. 5</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-04/index.html"><span>previous</span>← Module 04 — vendors, web services and APIs</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 05 of a cloud computing and cloud security portfolio. The control plane in
+      <span class="mono">labs/week05/minicloud.py</span> verifies the same Signature Version 4 requests that
+      <span class="mono">labs/week04/sigv4.py</span> generates.
+    </p>
+    <p class="foot__meta">
+      <span>updated 17 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

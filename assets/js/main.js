@@ -263,28 +263,30 @@
     });
   }
 
-  /* --------------------------------------------------- signing stepper --- */
+  /* --------------------------------------------------------- panels ----- */
 
-  function sigSteps() {
-    var box = document.getElementById('sig-steps');
+  /* One switcher for any figure whose buttons reveal one panel at a time.
+     `key` is the data attribute on the button whose value names the panel. */
+  function switchPanels(boxId, key) {
+    var box = document.getElementById(boxId);
     if (!box) return;
 
-    var buttons = Array.prototype.slice.call(box.querySelectorAll('button[data-step]'));
+    var buttons = Array.prototype.slice.call(box.querySelectorAll('button[' + key + ']'));
     var panels = Array.prototype.slice.call(box.querySelectorAll('[data-panel]'));
 
-    function show(step) {
+    function show(value) {
       buttons.forEach(function (button) {
-        button.setAttribute('aria-pressed', String(button.getAttribute('data-step') === step));
+        button.setAttribute('aria-pressed', String(button.getAttribute(key) === value));
       });
       panels.forEach(function (panel) {
-        if (panel.getAttribute('data-panel') === step) panel.removeAttribute('hidden');
+        if (panel.getAttribute('data-panel') === value) panel.removeAttribute('hidden');
         else panel.setAttribute('hidden', '');
       });
     }
 
     buttons.forEach(function (button) {
       button.addEventListener('click', function () {
-        show(button.getAttribute('data-step'));
+        show(button.getAttribute(key));
       });
     });
   }
@@ -295,7 +297,8 @@
     timing();
     sortableTables();
     stackFocus();
-    sigSteps();
+    switchPanels('sig-steps', 'data-step');
+    switchPanels('arch', 'data-comp');
   }
 
   if (document.readyState === "loading") {
