@@ -13,6 +13,9 @@ something runnable and explained rather than a set of slides.
 | 02 | [Cloud Fundamentals](module-02/index.html) | The NIST SP 800-145 definition, five characteristics paired with the risks they create, virtualisation and hypervisors, the launch pipeline, and a lab reading 42 AWS regions from public data |
 | 03 | [Service and Deployment Models](module-03/index.html) | IaaS, PaaS and SaaS across a seven-layer responsibility matrix, the four deployment models, GovCloud and residency, and a lab serving one page two ways with nginx and `python3 -m http.server` |
 
+Each module folder has its own README with the lab instructions, the measured output, an answer key and
+an honest list of what was not run: **[01](module-01/README.md)** · **[02](module-02/README.md)** · **[03](module-03/README.md)**
+
 ## Module 01 — what this covers
 
 Before securing a cloud you have to know what one is: a **distributed system** — independent computers
