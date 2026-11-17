@@ -1,0 +1,23 @@
+cloud APIs, and three different ways to be told no
+
+1 · a public data endpoint, no authentication
+    GET ip-ranges.amazonaws.com  →  200 OK · 2,754,637 bytes · 1757.5 ms
+
+2 · a control-plane endpoint, unsigned
+    GET ec2.us-east-1.amazonaws.com  →  400 Bad Request · MissingParameter · 1116.7 ms
+    The request must contain the parameter AWSAccessKeyId
+
+3 · the same call, signed with AWS's published example key
+    signature sent     : fc30f11631b44b1541162b7b020b0f9f…
+    scope              : 20261117/us-east-1/ec2/aws4_request
+    GET ec2.us-east-1.amazonaws.com  →  401 Unauthorized · AuthFailure · 669.6 ms
+    AWS was not able to validate the provided access credentials
+
+what the three answers mean
+    public   : no identity needed — this is data AWS publishes on purpose
+    unsigned : rejected at parameter validation, before authentication starts;
+               the API names what is missing (AWSAccessKeyId)
+    signed   : the Authorization header was parsed and the credentials evaluated,
+               then refused — the key is AWS's published example, not a real one
+
+wrote api_probe.json

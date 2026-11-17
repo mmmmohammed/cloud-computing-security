@@ -263,12 +263,39 @@
     });
   }
 
+  /* --------------------------------------------------- signing stepper --- */
+
+  function sigSteps() {
+    var box = document.getElementById('sig-steps');
+    if (!box) return;
+
+    var buttons = Array.prototype.slice.call(box.querySelectorAll('button[data-step]'));
+    var panels = Array.prototype.slice.call(box.querySelectorAll('[data-panel]'));
+
+    function show(step) {
+      buttons.forEach(function (button) {
+        button.setAttribute('aria-pressed', String(button.getAttribute('data-step') === step));
+      });
+      panels.forEach(function (panel) {
+        if (panel.getAttribute('data-panel') === step) panel.removeAttribute('hidden');
+        else panel.setAttribute('hidden', '');
+      });
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        show(button.getAttribute('data-step'));
+      });
+    });
+  }
+
   function init() {
     readingPosition();
     quiz();
     timing();
     sortableTables();
     stackFocus();
+    sigSteps();
   }
 
   if (document.readyState === "loading") {

@@ -1,0 +1,32 @@
+AWS Signature Version 4 — implementation check
+no AWS account, no credentials, no network
+
+step 1 · canonical request
+    GET
+    /
+    
+    host:example.amazonaws.com
+    x-amz-date:20150830T123600Z
+    
+    host;x-amz-date
+    e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+step 2 · string to sign
+    AWS4-HMAC-SHA256
+    20150830T123600Z
+    20150830/us-east-1/service/aws4_request
+    bb579772317eb040ac9ed261061d46c1f17a8133879d6129b6e1c25292927e63
+
+step 3 · signing key (HMAC chain, hex)
+    938127b5336810ddb6a5d6af445fcac9e371f9ed418ed386b022aed82901be75
+
+step 4 · signature
+    5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+step 5 · expected by AWS
+    5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+MATCH — implementation agrees with the published vector
+
+authorization header as it would be sent:
+    AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31

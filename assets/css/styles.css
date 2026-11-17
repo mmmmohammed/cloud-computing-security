@@ -1420,6 +1420,30 @@ details[open] > summary .sum-hint::after { content: "hide"; }
   color: var(--ink-2);
 }
 
+/* signing stepper (module 04) */
+.step { margin-top: var(--s3); }
+.step__label {
+  font-family: var(--mono);
+  font-size: var(--fs-meta);
+  color: var(--accent);
+  margin-bottom: var(--s2);
+}
+.step pre {
+  font-family: var(--mono);
+  font-size: var(--fs-meta);
+  line-height: 1.65;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  padding: var(--s3);
+  overflow-x: auto;
+  color: var(--ink-2);
+}
+.step p:not(.step__label) {
+  margin-top: var(--s2);
+  font-size: var(--fs-small);
+  color: var(--ink-2);
+}
+
 @media (max-width: 720px) {
   .split { grid-template-columns: 1fr; gap: var(--s5); }
   .modelspec__row { grid-template-columns: 1fr; gap: var(--s1); }

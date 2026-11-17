@@ -1,0 +1,35 @@
+{
+  "checked_at": "2026-11-17T08:20:41+00:00",
+  "public_endpoint": {
+    "url": "https://ip-ranges.amazonaws.com/ip-ranges.json",
+    "status": 200,
+    "reason": "OK",
+    "error_code": null,
+    "error_message": null,
+    "bytes": 2754637,
+    "ms": 1757.5,
+    "body_head": "{   \"syncToken\": \"1794894425\",   \"createDate\": \"2026-11-17-05-47-05\",   \"prefixes\": [     {       \"ip_prefix\": \"3.4.12.4/32\",       \"region\": \"eu-west-1\",       \"service\": \"AMAZON\",       \"network_border_group\": \"eu-west-1\"     },     {       \"ip_prefix\": \"3.5.140.0/22\",       \"region\": \"ap-northeas"
+  },
+  "unsigned": {
+    "url": "https://ec2.us-east-1.amazonaws.com/?Action=DescribeRegions&Version=2016-11-15",
+    "status": 400,
+    "reason": "Bad Request",
+    "error_code": "MissingParameter",
+    "error_message": "The request must contain the parameter AWSAccessKeyId",
+    "bytes": 252,
+    "ms": 1116.7,
+    "body_head": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <Response><Errors><Error><Code>MissingParameter</Code><Message>The request must contain the parameter AWSAccessKeyId</Message></Error></Errors><RequestID>8b072dc0-ba44-4fb8-a1e0-cbc6b9a04486</RequestID></Response>"
+  },
+  "signed": {
+    "url": "https://ec2.us-east-1.amazonaws.com/?Action=DescribeRegions&Version=2016-11-15",
+    "status": 401,
+    "reason": "Unauthorized",
+    "error_code": "AuthFailure",
+    "error_message": "AWS was not able to validate the provided access credentials",
+    "bytes": 254,
+    "ms": 669.6,
+    "body_head": "<?xml version=\"1.0\" encoding=\"UTF-8\"?> <Response><Errors><Error><Code>AuthFailure</Code><Message>AWS was not able to validate the provided access credentials</Message></Error></Errors><RequestID>b32ed94f-f285-4edc-a76c-3c82fc4b1194</RequestID></Response>",
+    "signature_sent": "fc30f11631b44b1541162b7b020b0f9ff67788c91f1fcc9c90e82d7449c1cfad",
+    "scope": "20261117/us-east-1/ec2/aws4_request"
+  }
+}

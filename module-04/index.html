@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Module 04 — Public cloud vendors, web services and APIs · Cloud computing security</title>
+<meta name="description" content="AWS, Azure and Google Cloud compared service by service; SOAP, REST, JSON and HTTP methods; how Signature Version 4 authenticates every cloud API call — implemented from the specification and checked against AWS's published test vector." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2315171b'/><rect x='4' y='4' width='8' height='8' fill='%239a3412'/></svg>" />
+</head>
+<body id="top">
+<a class="skip" href="#doc">Skip to contents</a>
+
+<div class="progress" aria-hidden="true"><span class="progress__bar" id="progress"></span></div>
+
+<header class="topbar">
+  <div class="shell topbar__in">
+    <a class="wordmark" href="../index.html"><span class="wordmark__mark" aria-hidden="true"></span>cloud computing security <span>/ 04</span></a>
+    <nav class="topbar__nav" aria-label="Page">
+      <a href="../index.html">Modules</a>
+      <a href="#lab">Lab evidence</a>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">Repository ↗</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- ======================================================== masthead === -->
+  <section class="masthead shell" aria-labelledby="page-title">
+    <div>
+      <p class="kicker">Module 04 — vendors, web services and APIs</p>
+      <h1 id="page-title">Every action in the cloud is one signed HTTP request.</h1>
+      <p class="lede">
+        Launching a server, deleting a backup, reading a bucket: underneath, each one is an API call with an
+        identity attached. That is why a stolen API key is worse than a stolen password — it is not one login,
+        it is your whole permission set, scriptable. This module maps the vendors against each other, then
+        implements the signature scheme that stands between the two.
+      </p>
+      <div class="masthead__actions">
+        <a class="btn" href="#vendors">Read the module</a>
+        <a class="quiet-link" href="#lab">Skip to the lab evidence</a>
+      </div>
+    </div>
+
+    <div class="masthead__aside">
+      <div class="defcard">
+        <div class="schematic__head"><span>three answers, measured</span><span>no account</span></div>
+        <dl class="factlist">
+          <div><dt>200</dt><dd><span class="mono">ip-ranges.amazonaws.com</span> — public data, no identity asked for.</dd></div>
+          <div><dt>400</dt><dd>Unsigned <span class="mono">ec2</span> call — refused before authentication even starts.</dd></div>
+          <div><dt>401</dt><dd>Signed with AWS's published example key — signature evaluated, credentials rejected.</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== meta strip === -->
+  <div class="shell">
+    <dl class="meta-strip">
+      <div>
+        <dt>module</dt>
+        <dd>04 — vendors, web services, APIs</dd>
+      </div>
+      <div>
+        <dt>level</dt>
+        <dd>Foundation → intermediate, four of fifteen</dd>
+      </div>
+      <div>
+        <dt>builds on</dt>
+        <dd>02 regions and launch pipeline · 03 responsibility matrix</dd>
+      </div>
+      <div>
+        <dt>evidence</dt>
+        <dd>SigV4 from the spec, matches AWS's test vector</dd>
+      </div>
+      <div>
+        <dt>source</dt>
+        <dd><a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">labs/week04</a></dd>
+      </div>
+    </dl>
+  </div>
+
+  <!-- =========================================================== doc ==== -->
+  <div class="doc shell" id="doc">
+    <aside class="toc" aria-label="Contents">
+      <p class="toc__title">Contents</p>
+      <ol class="toc__list">
+        <li><a href="#vendors" data-spy><span>01</span>Same building blocks, three names</a></li>
+        <li><a href="#choose" data-spy><span>02</span>Choosing a vendor</a></li>
+        <li><a href="#webservices" data-spy><span>03</span>Web services: SOAP, REST, HTTP</a></li>
+        <li><a href="#auth" data-spy><span>04</span>How a request is signed</a></li>
+        <li><a href="#cli" data-spy><span>05</span>CLIs and SDKs</a></li>
+        <li><a href="#standards" data-spy><span>06</span>Standards and frameworks</a></li>
+        <li><a href="#outage" data-spy><span>07</span>One region, one failure</a></li>
+        <li><a href="#case" data-spy><span>08</span>Pwani Logistics</a></li>
+        <li><a href="#lab" data-spy><span>09</span>Lab evidence</a></li>
+        <li><a href="#quiz" data-spy><span>10</span>Five questions</a></li>
+        <li><a href="#takeaways" data-spy><span>11</span>What I take from it</a></li>
+      </ol>
+    </aside>
+
+    <div class="doc__main">
+
+      <details class="toc-mobile">
+        <summary>Contents — 11 sections</summary>
+        <ol class="toc__list">
+          <li><a href="#vendors"><span>01</span>Same building blocks, three names</a></li>
+          <li><a href="#choose"><span>02</span>Choosing a vendor</a></li>
+          <li><a href="#webservices"><span>03</span>Web services: SOAP, REST, HTTP</a></li>
+          <li><a href="#auth"><span>04</span>How a request is signed</a></li>
+          <li><a href="#cli"><span>05</span>CLIs and SDKs</a></li>
+          <li><a href="#standards"><span>06</span>Standards and frameworks</a></li>
+          <li><a href="#outage"><span>07</span>One region, one failure</a></li>
+          <li><a href="#case"><span>08</span>Pwani Logistics</a></li>
+          <li><a href="#lab"><span>09</span>Lab evidence</a></li>
+          <li><a href="#quiz"><span>10</span>Five questions</a></li>
+          <li><a href="#takeaways"><span>11</span>What I take from it</a></li>
+        </ol>
+      </details>
+
+      <!-- 01 ------------------------------------------------------------- -->
+      <section class="sec" id="vendors" aria-labelledby="vendors-h">
+        <header class="sec-head">
+          <p class="sec-idx">01</p>
+          <div>
+            <h2 id="vendors-h">Same building blocks, three sets of names</h2>
+            <p>The vendors are not different products. They are the same eight primitives, branded differently — which is why a skill learned on one transfers to the others with a vocabulary list.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Equivalent services · AWS, Azure, Google Cloud</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Capability</th>
+                  <th scope="col">AWS</th>
+                  <th scope="col">Microsoft Azure</th>
+                  <th scope="col">Google Cloud</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">Virtual machines</th><td class="id">EC2</td><td>Virtual Machines</td><td>Compute Engine</td></tr>
+                <tr><th scope="row">Object storage</th><td class="id">S3</td><td>Blob Storage</td><td>Cloud Storage</td></tr>
+                <tr><th scope="row">Block storage</th><td class="id">EBS</td><td>Managed Disks</td><td>Persistent Disk</td></tr>
+                <tr><th scope="row">Identity and access</th><td class="id">IAM, IAM Identity Center</td><td>Entra ID + Azure RBAC</td><td>Cloud IAM</td></tr>
+                <tr><th scope="row">Virtual network</th><td class="id">VPC</td><td>Virtual Network (VNet)</td><td>VPC</td></tr>
+                <tr><th scope="row">Key management</th><td class="id">KMS, CloudHSM</td><td>Key Vault</td><td>Cloud KMS</td></tr>
+                <tr><th scope="row">Threat detection</th><td class="id">GuardDuty</td><td>Defender for Cloud</td><td>Security Command Center</td></tr>
+                <tr><th scope="row">Serverless functions</th><td class="id">Lambda</td><td>Azure Functions</td><td>Cloud Run functions</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Read the identity row twice. Every other capability is reachable through it, which is why the
+            identity service is the one attackers study first — and why the responsibility matrix from
+            <a href="../module-03/index.html#stack">module 03</a> never moves that row to the provider.
+          </p>
+
+          <p>
+            Beyond the big three there is Oracle Cloud Infrastructure, IBM Cloud and Alibaba Cloud. Two habits
+            matter more than the list: <b>service names change</b>, so verify against current documentation rather
+            than a slide; and <b>the mapping is not one-to-one</b> — two vendors' "equivalent" services can differ
+            in limits, defaults and failure modes, which is where migration projects get hurt.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">the interview answer</p>
+            <p>
+              "They are the same primitives with different names and different defaults." Knowing the primitives
+              is the transferable part; knowing the defaults is what stops you shipping an open bucket.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 02 ------------------------------------------------------------- -->
+      <section class="sec" id="choose" aria-labelledby="choose-h">
+        <header class="sec-head">
+          <p class="sec-idx">02</p>
+          <div>
+            <h2 id="choose-h">Choosing a vendor is six questions, and one of them is legal</h2>
+            <p>Price is the least interesting of the six, because it is the one you can measure before you commit.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Vendor selection criteria</caption>
+              <thead>
+                <tr><th scope="col">Criterion</th><th scope="col">The question</th><th scope="col">What it looks like from Kenya</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Region and latency</th>
+                  <td>Where is the nearest region, and where are replicas and backups?</td>
+                  <td>South Africa hosts regions for AWS (Cape Town), Azure (Johannesburg, Cape Town) and Google (Johannesburg). <a href="../module-02/index.html#lab">Module 02's probe</a> measured Cape Town at 84.8 ms against Ireland's 159.3 ms from this machine.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Compliance and certification</th>
+                  <td>Can the provider show the audit reports a regulator will ask for?</td>
+                  <td>ISO 27001, 27017, 27018, SOC 2, PCI DSS — obtainable through portals such as AWS Artifact rather than by emailing a salesperson.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Services and ecosystem</th>
+                  <td>Are the managed databases, AI and security tools you need actually available in your region?</td>
+                  <td>Newer services reach new regions later. A service that exists but not locally is a service you cannot use for data that must stay in-country.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Cost and billing currency</th>
+                  <td>What do compute, storage and <em>egress</em> cost, and how do you pay?</td>
+                  <td>Data transfer out is the line that surprises people; a card-only billing requirement is a procurement problem in many organisations.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Exit strategy</th>
+                  <td>How hard is it to leave, and what would leaving cost?</td>
+                  <td>Proprietary managed services raise the exit price. This is the lock-in question of <a href="../module-03/index.html#compare">module 03</a>, priced.</td>
+                </tr>
+                <tr>
+                  <th scope="row">Support and SLA</th>
+                  <td>What uptime is committed, and who answers at 3 a.m.?</td>
+                  <td>An SLA is a refund mechanism, not an availability mechanism. Your continuity plan has to survive the provider being down.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 ------------------------------------------------------------- -->
+      <section class="sec" id="webservices" aria-labelledby="ws-h">
+        <header class="sec-head">
+          <p class="sec-idx">03</p>
+          <div>
+            <h2 id="ws-h">SOAP, REST, and the five verbs everything is built from</h2>
+            <p>Cloud APIs converged on REST over HTTPS with JSON. The exceptions are old, and you still meet them.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="split">
+            <div>
+              <h3>SOAP</h3>
+              <ul>
+                <li>XML message inside an envelope, described by a WSDL contract</li>
+                <li>Strict typing and tooling; verbose on the wire</li>
+                <li>Survives in older enterprise systems and early cloud APIs</li>
+                <li>Security story: WS-Security, and a great deal of XML parsing to get wrong</li>
+              </ul>
+            </div>
+            <div>
+              <h3>REST</h3>
+              <ul>
+                <li>Resources addressed by URL, acted on with HTTP methods</li>
+                <li>Stateless: every request carries its own proof of identity</li>
+                <li>The default for AWS, Azure and Google Cloud control planes</li>
+                <li>Security story: the transport plus the signature on each call</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>HTTP methods and the status codes that matter in this module</caption>
+              <thead>
+                <tr><th scope="col">Method</th><th scope="col">Means</th><th scope="col">Status</th><th scope="col">Means</th></tr>
+              </thead>
+              <tbody>
+                <tr><td class="id">GET</td><td>Read — must not change state</td><td class="id">200</td><td>OK</td></tr>
+                <tr><td class="id">POST</td><td>Create</td><td class="id">400</td><td>Malformed or missing parameter</td></tr>
+                <tr><td class="id">PUT</td><td>Replace</td><td class="id">401</td><td>No valid identity presented</td></tr>
+                <tr><td class="id">PATCH</td><td>Partial update</td><td class="id">403</td><td>Identity valid, permission missing</td></tr>
+                <tr><td class="id">DELETE</td><td>Remove</td><td class="id">404</td><td>Not found</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The difference between 401 and 403 is the difference between "who are you" and "I know who you are,
+            and no". The lab later receives a real 401 from AWS, and the reasoning is visible in the response
+            body — which is still XML, because the EC2 Query API never moved to JSON.
+          </p>
+
+          <p>
+            Whatever the format, the security rules do not change: HTTPS only, authenticate every request,
+            least privilege on the identity, and log every call. The <a href="../module-01/index.html#fallacies">eight
+            fallacies</a> apply here too — "the network is reliable" is why a call needs a timeout, and "the
+            network is secure" is why a call needs its own authentication.
+          </p>
+        </div>
+      </section>
+
+      <!-- 04 ------------------------------------------------------------- -->
+      <section class="sec" id="auth" aria-labelledby="auth-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="auth-h">How AWS authenticates a request: five steps, one signature</h2>
+            <p>Signature Version 4. The secret key never travels; what travels is proof that you hold it. These are the values my implementation produced, not an illustration.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            The example below is AWS's own published test case: a bare <span class="mono">GET /</span> to
+            <span class="mono">example.amazonaws.com</span>, signed with the example key pair from their
+            documentation. Because the expected answer is published, agreeing with it is evidence — not a claim.
+          </p>
+
+          <figure class="stackfig" id="sig-steps" data-step="1">
+            <div class="stack-controls" role="group" aria-label="Signing steps">
+              <button type="button" class="chip-btn" data-step="1" aria-pressed="true">1 · canonical request</button>
+              <button type="button" class="chip-btn" data-step="2" aria-pressed="false">2 · string to sign</button>
+              <button type="button" class="chip-btn" data-step="3" aria-pressed="false">3 · signing key</button>
+              <button type="button" class="chip-btn" data-step="4" aria-pressed="false">4 · signature</button>
+              <button type="button" class="chip-btn" data-step="5" aria-pressed="false">5 · verify</button>
+            </div>
+
+            <div class="step" data-panel="1">
+              <p class="step__label">normalise the request so both sides compute the same string</p>
+              <pre>GET
+/
+
+host:example.amazonaws.com
+x-amz-date:20150830T123600Z
+
+host;x-amz-date
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</pre>
+              <p>The last line is the SHA-256 of the empty body. Sort the headers, lowercase the names, trim the values — every disagreement here becomes a signature mismatch later.</p>
+            </div>
+
+            <div class="step" data-panel="2" hidden>
+              <p class="step__label">bind the request hash to the algorithm, the time and the scope</p>
+              <pre>AWS4-HMAC-SHA256
+20150830T123600Z
+20150830/us-east-1/service/aws4_request
+bb579772317eb040ac9ed261061d46c1f17a8133879d6129b6e1c25292927e63</pre>
+              <p>The scope is date, region and service. A signature made for one region cannot be replayed against another — the scope is part of what was signed.</p>
+            </div>
+
+            <div class="step" data-panel="3" hidden>
+              <p class="step__label">derive a key from the secret, never sending the secret</p>
+              <pre>kDate    = HMAC("AWS4" + secret, "20150830")
+kRegion  = HMAC(kDate,  "us-east-1")
+kService = HMAC(kRegion, "service")
+kSigning = HMAC(kService, "aws4_request")
+
+kSigning = 938127b5336810ddb6a5d6af445fcac9e371f9ed418ed386b022aed82901be75</pre>
+              <p>Four chained HMACs. The key is useless tomorrow, useless in another region, and cannot be reversed into the secret.</p>
+            </div>
+
+            <div class="step" data-panel="4" hidden>
+              <p class="step__label">sign the string, send only the result</p>
+              <pre>signature = HMAC-SHA256(kSigning, string_to_sign)
+
+5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+Authorization: AWS4-HMAC-SHA256
+  Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request,
+  SignedHeaders=host;x-amz-date,
+  Signature=5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31</pre>
+              <p>The access key <em>ID</em> travels in the clear. It is an identifier, not a secret — that distinction is the whole design.</p>
+            </div>
+
+            <div class="step" data-panel="5" hidden>
+              <p class="step__label">the server repeats the calculation and compares</p>
+              <pre>expected by AWS   5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+computed here     5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+MATCH</pre>
+              <p>AWS recomputes the signature, checks the timestamp is recent, then evaluates IAM policy. Tampering breaks the signature; replay fails on the timestamp.</p>
+            </div>
+
+            <figcaption class="stack-summary">
+              Computed by <span class="mono">labs/week04/sigv4.py</span> with the standard library only — no SDK,
+              no account. The expected value is AWS's published <span class="mono">get-vanilla</span> vector.
+            </figcaption>
+          </figure>
+
+          <aside class="note">
+            <p class="note__label">what signing does not fix</p>
+            <p>
+              Signing proves the request was made by someone holding the secret key. It says nothing about whether
+              that someone should have the key. Steal the secret and you can sign anything, correctly, for as long
+              as the key lives — which is why the answer to a leaked key is rotation and scoping, not a longer key.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 05 ------------------------------------------------------------- -->
+      <section class="sec" id="cli" aria-labelledby="cli-h">
+        <header class="sec-head">
+          <p class="sec-idx">05</p>
+          <div>
+            <h2 id="cli-h">The CLI and the SDK are wrappers around the same API</h2>
+            <p>Both sign requests for you. That convenience is also why people never learn what a 403 means.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The same three questions on three clouds</caption>
+              <thead>
+                <tr><th scope="col">Question</th><th scope="col">AWS</th><th scope="col">Azure</th><th scope="col">Google Cloud</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Who am I right now?</th>
+                  <td class="id">aws sts get-caller-identity</td>
+                  <td class="id">az account show</td>
+                  <td class="id">gcloud auth list</td>
+                </tr>
+                <tr>
+                  <th scope="row">Which regions exist?</th>
+                  <td class="id">aws ec2 describe-regions</td>
+                  <td class="id">az account list-locations</td>
+                  <td class="id">gcloud compute regions list</td>
+                </tr>
+                <tr>
+                  <th scope="row">What storage can I see?</th>
+                  <td class="id">aws s3 ls</td>
+                  <td class="id">az storage container list</td>
+                  <td class="id">gcloud storage buckets list</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            "Who am I" first, always. In an incident it is the difference between investigating the right identity
+            and investigating your own laptop twice. In the Python SDK the same call looks like this, and the
+            signing is invisible:
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 · boto3</span><span class="code__tag">from the deck</span></p>
+<pre>import boto3
+
+ec2 = boto3.client("ec2", region_name="af-south-1")
+for region in ec2.describe_regions()["Regions"]:
+    print(region["RegionName"])</pre>
+          </div>
+
+          <p>
+            Two things follow. First, <b>prefer temporary credentials</b> — roles, SSO, instance profiles — over
+            long-term access keys; a key in a script is a key in a backup, a screenshot and a chat message.
+            Second, <b>every one of these calls is logged</b> in CloudTrail with a source IP and user agent, which
+            is how an investigation is reconstructed.
+          </p>
+        </div>
+      </section>
+
+      <!-- 06 ------------------------------------------------------------- -->
+      <section class="sec" id="standards" aria-labelledby="std-h">
+        <header class="sec-head">
+          <p class="sec-idx">06</p>
+          <div>
+            <h2 id="std-h">Six families of standard, and what each one is actually for</h2>
+            <p>Standards are how a security claim becomes checkable by someone who does not trust you.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Cloud standards and frameworks</caption>
+              <thead>
+                <tr><th scope="col">Body</th><th scope="col">What it gives you</th><th scope="col">Where you meet it</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">NIST</th><td>SP 800-145 (the definition), SP 800-144 (public cloud security and privacy), SP 800-210 (cloud access control), Cybersecurity Framework 2.0 (2024)</td><td>Design reviews, federal and regulated procurement</td></tr>
+                <tr><th scope="row">ISO/IEC</th><td>27001 (ISMS), 27017 (cloud-specific controls), 27018 (PII in public clouds)</td><td>Certification a customer or regulator asks to see</td></tr>
+                <tr><th scope="row">Cloud Security Alliance</th><td>Cloud Controls Matrix, STAR registry of provider assessments, Security Guidance</td><td>Comparing providers on controls rather than marketing</td></tr>
+                <tr><th scope="row">Industry rules</th><td>PCI DSS v4.0 for card data, SOC 2 attestation reports</td><td>Payments, and any B2B customer doing due diligence</td></tr>
+                <tr><th scope="row">CIS Benchmarks</th><td>Free hardening baselines for AWS, Azure, Google Cloud, Kubernetes and operating systems</td><td>The first hardening pass on any new account</td></tr>
+                <tr><th scope="row">Open standards</th><td>OCI images, OpenAPI for REST, Kubernetes, OAuth 2.0 and OpenID Connect</td><td>Where portability and lock-in are decided</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Two of these behave differently from the rest. <b>CIS Benchmarks</b> are prescriptive — you can apply
+            them this afternoon. <b>ISO 27001</b> is a management system, not a checklist of technical settings;
+            passing an audit does not mean the account is hardened, and hardening the account does not pass an
+            audit. Confusing the two is common and expensive.
+          </p>
+        </div>
+      </section>
+
+      <!-- 07 ------------------------------------------------------------- -->
+      <section class="sec" id="outage" aria-labelledby="outage-h">
+        <header class="sec-head">
+          <p class="sec-idx">07</p>
+          <div>
+            <h2 id="outage-h">One region failed, and customers could not even open the dashboard</h2>
+            <p>7 December 2021, AWS us-east-1. The most instructive part is not the outage — it is the concentration.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p>
+            An automated scaling activity triggered behaviour that congested AWS's internal network in
+            <span class="mono">us-east-1</span>. The control plane degraded with it: many APIs and the console were
+            impaired for hours, so customers could not reach the dashboards they would have used to see what was
+            wrong. Consumer services and smart-home devices that depended on that region failed with it.
+          </p>
+
+          <p>
+            Module 02's probe makes the concentration concrete: of 10,755 IPv4 and IPv6 prefixes published by AWS,
+            <b>1,506 belonged to <span class="mono">us-east-1</span></b> — 14% of the address space in one region.
+            Popularity is not a security control, but it is a blast radius.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>What the outage teaches, in the language of the earlier modules</caption>
+              <thead>
+                <tr><th scope="col">Observation</th><th scope="col">Principle behind it</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>The console failed with the API</td><td>Your recovery tool must not depend on the thing that is broken — the <a href="../module-01/index.html#fallacies">fallacy</a> of a single dependency, applied to operations.</td></tr>
+                <tr><td>Devices stopped working when a region did</td><td>Availability is part of security: the A in CIA. <a href="../module-01/index.html#system">Module 01</a> said a distributed system hides failure; here nothing hid it.</td></tr>
+                <tr><td>Scaling automation caused the congestion</td><td><a href="../module-02/index.html#case">Module 02's elasticity case</a> has a shadow: automation amplifies whatever it is told to amplify, including a mistake.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <aside class="note">
+            <p class="note__label">what to do about it</p>
+            <p>
+              Know which of your services are single-region and say so out loud. Put the recovery path — runbooks,
+              credentials, status page — somewhere that does not share the failure. And read provider post-incident
+              reports: they are free case material written by the people who fixed it.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 08 ------------------------------------------------------------- -->
+      <section class="sec" id="case" aria-labelledby="case-h">
+        <header class="sec-head">
+          <p class="sec-idx">08</p>
+          <div>
+            <h2 id="case-h">Pwani Logistics: a key on a shared drive, and a CEO worried about lock-in</h2>
+            <p>Mombasa. Container tracking across East Africa. The scenario is the module's quiz, and it is not exotic.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>The facts, as the case gives them</caption>
+              <tbody>
+                <tr><th scope="row">Customers</th><td>Importers in Uganda and Rwanda report the current system is slow — a latency complaint before it is anything else.</td></tr>
+                <tr><th scope="row">The code</th><td>A developer's scripts already call a cloud API, and store the access key and secret in the script on a shared drive "to make it easy for others".</td></tr>
+                <tr><th scope="row">The board</th><td>The CEO wants the cheapest option now, and is worried about being trapped later.</td></tr>
+                <tr><th scope="row">The regulator</th><td>Personal data is processed, and the company must show evidence of security controls.</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Rank the risks and the answer is uncomfortable: the slow system is a product problem, and the shared
+            drive is an incident. A long-term key in a shared script is <em>every permission that key has</em>,
+            available to everyone with access to the share, with no second factor and no expiry — and no way to
+            know who used it, because they all used the same identity.
+          </p>
+
+          <p>
+            The remediation is a sequence, not a slogan: deactivate and rotate the key; review the audit log for
+            the window it was exposed; move to roles or SSO with short-lived credentials; put the remaining secrets
+            in a secret manager; and add a check that fails the build if a key pattern appears in a commit.
+          </p>
+        </div>
+      </section>
+
+      <!-- 09 ------------------------------------------------------------- -->
+      <section class="sec" id="lab" aria-labelledby="lab-h">
+        <header class="sec-head">
+          <p class="sec-idx">09</p>
+          <div>
+            <h2 id="lab-h">Lab: sign a real request, and collect three ways of being refused</h2>
+            <p>The account half needs a cloud account. The half that proves the mechanism does not — and it is the half that is checkable.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <p class="file-path">labs/week04 · sigv4.py, api_probe.py · logs: sigv4_check.log, api_probe.log</p>
+
+          <h3>The account half</h3>
+          <p>
+            <span class="status status--planned">not run</span>&nbsp;
+            The lab sheet asks for AWS CLI v2 with a Learner Lab account: configure credentials,
+            <span class="mono">sts get-caller-identity</span>, list regions and buckets, write a boto3 script that
+            lists running instances, make a deliberately unauthorised call and record the
+            <span class="mono">AccessDenied</span>, then find the calls in CloudTrail. Without an account none of
+            that can be executed, so it is listed as the next practical step rather than described as if I had done
+            it. The deliverable asks for screenshots of CLI output and matching CloudTrail events — an honest
+            version of that is not available to me yet.
+          </p>
+
+          <h3>The half I could run: the signature, from the specification</h3>
+          <p>
+            Signature Version 4 is a published algorithm, and AWS publishes a test vector with a fixed expected
+            signature. That is a complete correctness check with no account involved: if my implementation
+            reproduces the published value, the canonical request, the string to sign and the key derivation are
+            all right.
+          </p>
+
+          <div class="code">
+            <p class="code__head"><span>python3 labs/week04/sigv4.py</span><span class="code__tag code__tag--ok">matches AWS's vector</span></p>
+<pre><span class="c-prompt">$</span> python3 sigv4.py
+AWS Signature Version 4 — implementation check
+no AWS account, no credentials, no network
+
+step 1 · canonical request
+    GET
+    /
+
+    host:example.amazonaws.com
+    x-amz-date:20150830T123600Z
+
+    host;x-amz-date
+    e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+step 2 · string to sign
+    AWS4-HMAC-SHA256
+    20150830T123600Z
+    20150830/us-east-1/service/aws4_request
+    bb579772317eb040ac9ed261061d46c1f17a8133879d6129b6e1c25292927e63
+
+step 3 · signing key (HMAC chain, hex)
+    938127b5336810ddb6a5d6af445fcac9e371f9ed418ed386b022aed82901be75
+
+step 4 · signature
+    5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+step 5 · expected by AWS
+    5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31
+
+<span class="c-ok">MATCH — implementation agrees with the published vector</span></pre>
+          </div>
+
+          <p>
+            A hundred and forty-five lines of standard library and comments, and the numbers agree with AWS's own
+            <span class="mono">get-vanilla</span> case byte for byte. The script exits non-zero on any mismatch, so it
+            is a check, not a demonstration.
+          </p>
+
+          <h3>Three ways to be told no</h3>
+          <p>
+            The second script makes read-only calls to three real endpoints and records exactly what comes back.
+            No credentials are real: the key pair is AWS's published example.
+          </p>
+
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Measured · labs/week04/api_probe.py</caption>
+              <thead>
+                <tr><th scope="col">Request</th><th scope="col">Status</th><th scope="col">Error code</th><th scope="col">What it means</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><span class="mono">ip-ranges.amazonaws.com</span>, unsigned</th>
+                  <td class="num">200</td>
+                  <td>—</td>
+                  <td>Public data. No identity asked for, 2.7 MB returned.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><span class="mono">ec2</span> DescribeRegions, unsigned</th>
+                  <td class="num">400</td>
+                  <td class="id">MissingParameter</td>
+                  <td>Rejected at parameter validation, before authentication: “must contain the parameter AWSAccessKeyId”.</td>
+                </tr>
+                <tr>
+                  <th scope="row"><span class="mono">ec2</span> DescribeRegions, signed with the example key</th>
+                  <td class="num">401</td>
+                  <td class="id">AuthFailure</td>
+                  <td>The Authorization header was parsed and the credentials evaluated, then refused — because the key is a documentation example.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            That third row is the useful one. The difference between <span class="mono">400</span> and
+            <span class="mono">401</span> is the difference between a request the service could not read and a
+            request it read, understood, and refused on identity — which is exactly the distinction a responder
+            needs when triaging: a wall of 401s from one source IP is a credential problem worth chasing, a wall of
+            400s is usually a broken client.
+          </p>
+
+          <aside class="note">
+            <p class="note__label">what this does not prove</p>
+            <p>
+              It does not prove I can operate a cloud account — the CLI, boto3 and CloudTrail half is still
+              unexercised. It proves I can read a cryptographic specification, implement it against the published
+              vector, and interpret a provider's error responses. Those are different skills, and this page does
+              not blur them.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 10 ------------------------------------------------------------- -->
+      <section class="sec" id="quiz" aria-labelledby="quiz-h">
+        <header class="sec-head">
+          <p class="sec-idx">10</p>
+          <div>
+            <h2 id="quiz-h">Five questions on Pwani Logistics</h2>
+            <p>Scenario in section 08. Answer, then compare — each one has an explanation.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <form class="quiz">
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q1</span>What is the biggest immediate security problem?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q1" value="A"><span class="opt__key">A</span><span>Using REST instead of SOAP</span></label>
+                <label class="opt"><input type="radio" name="q1" value="B"><span class="opt__key">B</span><span>A long-term API secret stored in a shared script</span></label>
+                <label class="opt"><input type="radio" name="q1" value="C"><span class="opt__key">C</span><span>Choosing a region in South Africa</span></label>
+                <label class="opt"><input type="radio" name="q1" value="D"><span class="opt__key">D</span><span>Using JSON</span></label>
+              </div>
+              <p class="feedback" hidden><b>B.</b> Anyone with access to the share has the key and its full permission set, with no expiry and no way to tell who used it. It should be removed, rotated, and replaced with roles or temporary credentials.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q2</span>Where can Pwani download its provider's ISO 27001 and SOC 2 reports for regulators?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q2" value="A"><span class="opt__key">A</span><span>The CLI <span class="mono">configure</span> command</span></label>
+                <label class="opt"><input type="radio" name="q2" value="B"><span class="opt__key">B</span><span>Kenya's ODPC website</span></label>
+                <label class="opt"><input type="radio" name="q2" value="C"><span class="opt__key">C</span><span>Through the provider's compliance portal, e.g. AWS Artifact</span></label>
+                <label class="opt"><input type="radio" name="q2" value="D"><span class="opt__key">D</span><span>CloudTrail</span></label>
+              </div>
+              <p class="feedback" hidden><b>C.</b> Providers publish third-party audit reports through a compliance portal. CloudTrail is the evidence of your own actions, not the provider's certifications.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="B">
+              <legend><span class="q__num">Q3</span>Which choice best reduces the CEO's lock-in worry?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q3" value="A"><span class="opt__key">A</span><span>Use only proprietary managed services</span></label>
+                <label class="opt"><input type="radio" name="q3" value="B"><span class="opt__key">B</span><span>Use containers, open standards, and a documented data-export plan</span></label>
+                <label class="opt"><input type="radio" name="q3" value="C"><span class="opt__key">C</span><span>Avoid all APIs</span></label>
+                <label class="opt"><input type="radio" name="q3" value="D"><span class="opt__key">D</span><span>Store data in one region only</span></label>
+              </div>
+              <p class="feedback" hidden><b>B.</b> Portable technology and a written exit plan reduce dependence on one vendor. Avoiding APIs is not possible — every action is an API call.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="D">
+              <legend><span class="q__num">Q4</span>In AWS SigV4, what is sent across the network with each request?</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q4" value="A"><span class="opt__key">A</span><span>The account password</span></label>
+                <label class="opt"><input type="radio" name="q4" value="B"><span class="opt__key">B</span><span>The MFA seed</span></label>
+                <label class="opt"><input type="radio" name="q4" value="C"><span class="opt__key">C</span><span>The secret access key</span></label>
+                <label class="opt"><input type="radio" name="q4" value="D"><span class="opt__key">D</span><span>The access key ID and a signature</span></label>
+              </div>
+              <p class="feedback" hidden><b>D.</b> Only the key ID and the computed signature travel. The secret stays on the client and is used to derive a per-day signing key — which is what section 04's third step computes.</p>
+            </fieldset>
+
+            <fieldset class="q" data-answer="C">
+              <legend><span class="q__num">Q5</span>An API call returns HTTP 403. This most likely means:</legend>
+              <div class="opts">
+                <label class="opt"><input type="radio" name="q5" value="A"><span class="opt__key">A</span><span>The resource does not exist</span></label>
+                <label class="opt"><input type="radio" name="q5" value="B"><span class="opt__key">B</span><span>The request succeeded</span></label>
+                <label class="opt"><input type="radio" name="q5" value="C"><span class="opt__key">C</span><span>The caller is not authorised for the action</span></label>
+                <label class="opt"><input type="radio" name="q5" value="D"><span class="opt__key">D</span><span>The server is overloaded</span></label>
+              </div>
+              <p class="feedback" hidden><b>C.</b> 403 means the identity was accepted and the permission was not. A missing resource is 404; a refused identity is 401.</p>
+            </fieldset>
+
+            <p class="score">
+              <span id="score-text">0 of 5 answered</span>
+              <span class="score__bar" aria-hidden="true"><span class="score__fill" id="score-fill"></span></span>
+            </p>
+          </form>
+        </div>
+      </section>
+
+      <!-- 11 ------------------------------------------------------------- -->
+      <section class="sec" id="takeaways" aria-labelledby="take4-h">
+        <header class="sec-head">
+          <p class="sec-idx">11</p>
+          <div>
+            <h2 id="take4-h">What I am taking from module 04</h2>
+          </div>
+        </header>
+        <div class="sec-body">
+          <ol class="takeaways">
+            <li><span class="n">01</span><span>Clouds are the same primitives under different names; the transferable skill is the primitive, the risk is the default.</span></li>
+            <li><span class="n">02</span><span>Every action is an API call, so <b>the identity is the perimeter</b> — not the network diagram.</span></li>
+            <li><span class="n">03</span><span>Signing protects the secret in transit and blocks replay; it does not protect you from a stolen key.</span></li>
+            <li><span class="n">04</span><span>401 and 403 are different investigations: one is credentials, the other is permissions.</span></li>
+            <li><span class="n">05</span><span>Availability is part of security, and <b>one popular region is a concentrated blast radius</b>.</span></li>
+          </ol>
+
+          <div class="next">
+            <p class="next__label">next — module 05</p>
+            <h3><a href="../index.html#m05">Private cloud with Eucalyptus →</a></h3>
+            <p>Building an IaaS control plane yourself: architecture, web services and querying its APIs.</p>
+          </div>
+
+          <div class="reading">
+            <p>Reading</p>
+            <ul>
+              <li>Buyya et al. (2011), <em>Cloud Computing: Principles and Paradigms</em>, Ch. 2 and 4</li>
+              <li>Reese (2009), <em>Cloud Application Architectures</em>, Ch. 2</li>
+              <li>AWS documentation, <em>Signature Version 4 signing process</em>, and the SigV4 test suite</li>
+            </ul>
+          </div>
+
+          <nav class="pager" aria-label="Modules">
+            <a href="../module-03/index.html"><span>previous</span>← Module 03 — service and deployment models</a>
+            <a href="../index.html"><span>index</span>All modules →</a>
+          </nav>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell foot__in">
+    <p>
+      Module 04 of a cloud computing and cloud security portfolio. The signing implementation in
+      <span class="mono">labs/week04/sigv4.py</span> reproduces AWS's published test vector and exits non-zero
+      when it does not.
+    </p>
+    <p class="foot__meta">
+      <span>updated 17 nov 2026</span>
+      <a href="https://github.com/mmmmohammed/cloud-computing-security" target="_blank" rel="noopener">source ↗</a>
+    </p>
+  </div>
+</footer>
+
+<script src="../assets/js/main.js" defer></script>
+</body>
+</html>

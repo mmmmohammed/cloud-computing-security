@@ -60,6 +60,7 @@
         <li><a href="#m01"><span>01</span>Distributed computing</a></li>
         <li><a href="#m02"><span>02</span>Cloud fundamentals</a></li>
         <li><a href="#m03"><span>03</span>Service and deployment models</a></li>
+        <li><a href="#m04"><span>04</span>Vendors, web services and APIs</a></li>
       </ol>
     </aside>
 
@@ -167,6 +168,45 @@
                 <tr>
                   <td>Read it</td>
                   <td><a href="module-03/index.html">module 03 — service and deployment models →</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="sec" id="m04" aria-labelledby="m04-h">
+        <header class="sec-head">
+          <p class="sec-idx">04</p>
+          <div>
+            <h2 id="m04-h"><a href="module-04/index.html">Vendors, web services and APIs</a></h2>
+            <p>Three clouds mapped against each other, then the signature that makes every API call an identity claim — implemented from the specification and checked against AWS's published test vector.</p>
+          </div>
+        </header>
+        <div class="sec-body">
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <caption>Module 04 at a glance</caption>
+              <tbody>
+                <tr>
+                  <td style="width:9rem">Topics</td>
+                  <td>AWS, Azure and Google Cloud equivalents · six vendor-selection criteria · SOAP and REST · HTTP methods and status codes · CLIs and SDKs · NIST, ISO, CSA, CIS standards</td>
+                </tr>
+                <tr>
+                  <td>Interactive</td>
+                  <td>A five-step walkthrough of Signature Version 4, each step showing the value my implementation actually computed</td>
+                </tr>
+                <tr>
+                  <td>Lab</td>
+                  <td>SigV4 written from the spec in the standard library, verified against AWS's <span class="mono">get-vanilla</span> vector; then three real endpoints returning 200, 400 and 401</td>
+                </tr>
+                <tr>
+                  <td>Measured</td>
+                  <td>signature matches byte for byte · unsigned call 400 <span class="mono">MissingParameter</span> · signed with the example key 401 <span class="mono">AuthFailure</span></td>
+                </tr>
+                <tr>
+                  <td>Read it</td>
+                  <td><a href="module-04/index.html">module 04 — vendors, web services and APIs →</a></td>
                 </tr>
               </tbody>
             </table>
