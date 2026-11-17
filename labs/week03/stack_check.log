@@ -1,0 +1,17 @@
+layer                       on-prem      IaaS      PaaS      SaaS
+-----------------------------------------------------------------
+data & access                   you       you       you       you
+applications                    you       you       you  provider
+runtime & middleware            you       you  provider  provider
+operating system                you       you  provider  provider
+virtualisation                  you  provider  provider  provider
+servers & storage               you  provider  provider  provider
+networking & facilities         you  provider  provider  provider
+
+provider-managed layers: on-prem 0/7 · IaaS 3/7 · PaaS 5/7 · SaaS 6/7
+
+checking ../../module-03/index.html ...
+  matrix 28 cells: matches the model
+  layer names: match
+  bar figure counts: match (0, 3, 5, 6)
+OK — page agrees with the source of truth

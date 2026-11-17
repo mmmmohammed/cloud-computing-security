@@ -11,6 +11,7 @@ something runnable and explained rather than a set of slides.
 |---|--------|----------------|
 | 01 | [Distributed Computing](module-01/index.html) | The six eras of computing, distributed-system properties and transparency, the eight fallacies, a socket lab that fails on purpose, and the SACCO case study quiz |
 | 02 | [Cloud Fundamentals](module-02/index.html) | The NIST SP 800-145 definition, five characteristics paired with the risks they create, virtualisation and hypervisors, the launch pipeline, and a lab reading 42 AWS regions from public data |
+| 03 | [Service and Deployment Models](module-03/index.html) | IaaS, PaaS and SaaS across a seven-layer responsibility matrix, the four deployment models, GovCloud and residency, and a lab serving one page two ways with nginx and `python3 -m http.server` |
 
 ## Module 01 — what this covers
 
@@ -71,10 +72,12 @@ storm against an authentication service.
 index.html                 portfolio landing page, indexes the modules
 module-01/index.html       module 01 — distributed computing
 module-02/index.html       module 02 — cloud fundamentals
+module-03/index.html       module 03 — service and deployment models
 assets/css/styles.css      one design system, shared by every page
 assets/js/main.js          contents rail, quiz, timing panel, sortable tables
 labs/week01/               socket lab scripts, captured logs, latency JSON
 labs/week02/               AWS region probe, dataset summary, captured output
+labs/week03/               nginx vs http.server comparison, matrix validator, fixtures
 ```
 
 ## Run it locally

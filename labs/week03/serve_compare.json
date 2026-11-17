@@ -1,0 +1,36 @@
+{
+  "config_lines_nginx": 21,
+  "config_lines_python": 0,
+  "results": {
+    "nginx": {
+      "start_s": 0.05,
+      "status": 200,
+      "ttfb_ms": 0.41,
+      "listing": false,
+      "body_kb": 0.18,
+      "dir_listing": false,
+      "dir_status": 403
+    },
+    "python": {
+      "start_s": 0.06,
+      "status": 200,
+      "ttfb_ms": 0.78,
+      "listing": false,
+      "body_kb": 0.18,
+      "dir_listing": true,
+      "dir_status": 200
+    }
+  },
+  "server_headers": {
+    "nginx": "nginx",
+    "python": "SimpleHTTP/0.6 Python/3.14.8"
+  },
+  "dir_listing": {
+    "nginx": false,
+    "python": true
+  },
+  "dir_status": {
+    "nginx": 403,
+    "python": 200
+  }
+}

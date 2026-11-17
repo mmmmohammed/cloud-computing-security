@@ -1,0 +1,18 @@
+starting the two servers ...
+
+                            nginx (IaaS)   python (PaaS-ish)
+------------------------------------------------------------
+config lines                          21                   0
+start to first 200                  0.05                0.06
+TTFB                                0.41                0.78
+response KB                         0.18                0.18
+
+server header         
+  nginx    nginx
+  python   SimpleHTTP/0.6 Python/3.14.8
+
+directory listing     
+  nginx    not exposed
+  python   EXPOSED /sub/
+
+wrote serve_compare.json

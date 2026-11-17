@@ -17,3 +17,9 @@ labs/week02/ip-ranges.json
 .env
 .env.*
 node_modules/
+
+# nginx runtime state from the week 03 lab — recreated on every run
+labs/week03/nginx/
+
+# per-thread workspace mounts
+threads/

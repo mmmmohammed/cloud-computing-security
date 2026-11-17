@@ -219,11 +219,56 @@
     }
   }
 
+  /* ------------------------------------------- responsibility matrix focus -- */
+
+  function stackFocus() {
+    var fig = document.getElementById('stackfig');
+    if (!fig) return;
+
+    var summary = document.getElementById('stack-summary');
+    var buttons = Array.prototype.slice.call(fig.querySelectorAll('button[data-focus]'));
+    var rows = Array.prototype.slice.call(fig.querySelectorAll('tr[data-layer]'));
+    var names = { onprem: 'On-premises', iaas: 'IaaS', paas: 'PaaS', saas: 'SaaS' };
+
+    function apply(model) {
+      var active = fig.getAttribute('data-focus') === model ? 'none' : model;
+      fig.setAttribute('data-focus', active);
+
+      buttons.forEach(function (button) {
+        button.setAttribute('aria-pressed', String(button.getAttribute('data-focus') === active));
+      });
+
+      if (!summary) return;
+      if (active === 'none') {
+        summary.textContent = 'Pick a model above to see what it leaves you owning.';
+        return;
+      }
+
+      var mine = rows.filter(function (row) {
+        var cell = row.querySelector('td[data-col="' + active + '"]');
+        return cell && cell.getAttribute('data-owner') === 'you';
+      }).map(function (row) {
+        return row.querySelector('th').textContent.trim().toLowerCase();
+      });
+
+      var total = rows.length;
+      summary.textContent = names[active] + ': the provider manages ' + (total - mine.length) +
+        ' of ' + total + ' layers. You still own ' + mine.length + ' — ' + mine.join(', ') + '.';
+    }
+
+    buttons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        apply(button.getAttribute('data-focus'));
+      });
+    });
+  }
+
   function init() {
     readingPosition();
     quiz();
     timing();
     sortableTables();
+    stackFocus();
   }
 
   if (document.readyState === "loading") {
